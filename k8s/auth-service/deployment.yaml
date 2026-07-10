@@ -3,7 +3,7 @@ kind: Deployment
 
 metadata:
   name: auth-service
-  namespace: togglemaster
+  namespace: toggle-prod
 
 spec:
 
@@ -27,7 +27,7 @@ spec:
 
         - name: auth-service
 
-          image: 943048301123.dkr.ecr.us-east-1.amazonaws.com/auth-service:latest
+          image: 708993007071.dkr.ecr.us-east-1.amazonaws.com/auth-service:latest
 
           imagePullPolicy: Always
 

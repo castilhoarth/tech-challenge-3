@@ -3,7 +3,7 @@ kind: Ingress
 
 metadata:
   name: togglemaster-ingress
-  namespace: togglemaster
+  namespace: toggle-prod
 
   annotations:
     nginx.ingress.kubernetes.io/use-regex: "true"
