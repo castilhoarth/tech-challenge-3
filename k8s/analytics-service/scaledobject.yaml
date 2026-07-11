@@ -1,0 +1,33 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+
+metadata:
+  name: analytics-sqs-scaler
+  namespace: toggle-prod
+
+spec:
+
+  scaleTargetRef:
+    name: analytics-service
+
+  minReplicaCount: 1
+  maxReplicaCount: 5
+
+  pollingInterval: 15
+  cooldownPeriod: 60
+
+  triggers:
+
+  - type: aws-sqs-queue
+
+    metadata:
+
+      queueURL: https://sqs.us-east-1.amazonaws.com/708993007071/evaluation-analytics-queue
+
+      queueLength: "5"
+
+      awsRegion: us-east-1
+
+    authenticationRef:
+
+      name: analytics-aws-auth

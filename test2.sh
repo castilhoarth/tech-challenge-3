@@ -97,7 +97,7 @@ echo "========================================"
 echo "3. Criando Flag"
 echo "========================================"
 
-HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" \
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
 -X POST "$BASE_URL_FLAG/flags" \
 -H "Content-Type: application/json" \
 -H "Authorization: Bearer $API_KEY" \
@@ -112,7 +112,6 @@ if [ "$HTTP_CODE" != "201" ]; then
     cat response.json
     exit 1
 fi
-
 cat response.json
 
 echo ""
@@ -152,7 +151,6 @@ if [ "$HTTP_CODE" != "200" ]; then
     cat response.json
     exit 1
 fi
-
 cat response.json
 
 echo ""
@@ -220,7 +218,6 @@ if [ "$HTTP_CODE" != "200" ]; then
     cat response.json
     exit 1
 fi
-
 cat response.json
 
 echo ""
@@ -243,7 +240,6 @@ HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" \
 
 if [ "$HTTP_CODE" != "200" ]; then
     echo "ERRO ao atualizar regra (HTTP $HTTP_CODE)"
-    cat response.json
     exit 1
 fi
 
@@ -271,8 +267,8 @@ do
       cat response.json
       exit 1
   fi
-
   cat response.json
+
   echo -e "\n"
 done
 
@@ -289,13 +285,14 @@ do
     "$BASE_URL_EVALUATION/evaluate?user_id=$USER_NAME2&flag_name=enable-new-dashboard-1780855960" \
     )
 
+
   if [ "$HTTP_CODE" != "200" ]; then
       echo "ERRO na tentativa $i (HTTP $HTTP_CODE)"
       cat response.json
       exit 1
   fi
-
   cat response.json
+
   echo -e "\n"
 done
 
@@ -303,7 +300,37 @@ echo ""
 echo ""
 
 echo "========================================"
-echo "11. Deletando Flag"
+echo "11. Teste de Carga"
+echo "========================================"
+
+for i in $(seq 1 1000)
+do
+  (
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+      "$BASE_URL_EVALUATION/evaluate?user_id=user-$i&flag_name=enable-new-dashboard-1783784225"
+    )
+
+    if [ "$HTTP_CODE" != "200" ]; then
+        echo "ERRO na tentativa $i (HTTP $HTTP_CODE)"
+    else
+        echo "Request $i OK"
+    fi
+  ) &
+
+  # limita concorrência
+  if (( i % 50 == 0 )); then
+      wait
+  fi
+done
+
+wait
+
+echo ""
+echo "Teste de carga finalizado"
+
+
+echo "========================================"
+echo "12. Deletando Flag"
 echo "========================================"
 
 echo "FLAG_NAME=$FLAG_NAME"
@@ -315,7 +342,6 @@ HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" \
 
 if [ "$HTTP_CODE" != "204" ]; then
     echo "ERRO ao deletar flag (HTTP $HTTP_CODE)"
-    cat response.json
     exit 1
 fi
 
