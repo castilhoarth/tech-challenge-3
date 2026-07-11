@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 
 metadata:
-  name: targeting-service
+  name: evaluation-service
   namespace: toggle-prod
 
 spec:
@@ -11,39 +11,39 @@ spec:
 
   selector:
     matchLabels:
-      app: targeting-service
+      app: evaluation-service
 
 
   template:
 
     metadata:
       labels:
-        app: targeting-service
+        app: evaluation-service
 
 
     spec:
 
       containers:
 
-        - name: targeting-service
+        - name: evaluation-service
 
-          image: 708993007071.dkr.ecr.us-east-1.amazonaws.com/targeting-service:latest
+          image: 708993007071.dkr.ecr.us-east-1.amazonaws.com/evaluation-service:latest
 
           imagePullPolicy: Always
 
 
           ports:
 
-            - containerPort: 8003
+            - containerPort: 8004
 
 
           envFrom:
 
             - configMapRef:
-                name: targeting-config
+                name: evaluation-config
 
             - secretRef:
-                name: targeting-secret
+                name: evaluation-secret
 
 
           resources:
@@ -62,7 +62,7 @@ spec:
 
             httpGet:
               path: /health
-              port: 8003
+              port: 8004
 
             initialDelaySeconds: 10
             periodSeconds: 5
@@ -73,7 +73,7 @@ spec:
 
             httpGet:
               path: /health
-              port: 8003
+              port: 8004
 
             initialDelaySeconds: 30
             periodSeconds: 10

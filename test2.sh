@@ -7,7 +7,7 @@
 BASE_URL_AUTH=${BASE_URL_AUTH:-http://acc28ae7dcc21487e87cdd1a2bbeb3d2-106617744.us-east-1.elb.amazonaws.com/auth}
 BASE_URL_FLAG=${BASE_URL_FLAG:-http://acc28ae7dcc21487e87cdd1a2bbeb3d2-106617744.us-east-1.elb.amazonaws.com/flags}
 BASE_URL_TARGETING=${BASE_URL_TARGETING:-http://acc28ae7dcc21487e87cdd1a2bbeb3d2-106617744.us-east-1.elb.amazonaws.com/targeting}
-BASE_URL_EVALUATION=${BASE_URL_EVALUATION:-http://acc28ae7dcc21487e87cdd1a2bbeb3d2-106617744.us-east-1.elb.amazonaws.com:8004}
+BASE_URL_EVALUATION=${BASE_URL_EVALUATION:-http://acc28ae7dcc21487e87cdd1a2bbeb3d2-106617744.us-east-1.elb.amazonaws.com/evaluation}
 BASE_URL_ANALYTICS=${BASE_URL_ANALYTICS:-http://acc28ae7dcc21487e87cdd1a2bbeb3d2-106617744.us-east-1.elb.amazonaws.com:8005}
 
 MASTER_KEY=${MASTER_KEY:-admin-secreto-123}
@@ -25,8 +25,8 @@ echo "========================================"
 echo "AUTH      : $BASE_URL_AUTH"
 echo "FLAG      : $BASE_URL_FLAG"
 echo "TARGETING : $BASE_URL_TARGETING"
-: <<'EOF'
 echo "EVALUATION : $BASE_URL_EVALUATION"
+: <<'EOF'
 echo "ANALYTICS : $BASE_URL_ANALYTICS"
 EOF
 
@@ -53,11 +53,11 @@ echo
 curl "$BASE_URL_TARGETING/health"
 echo
 echo
-: <<'EOF'
+
 curl "$BASE_URL_EVALUATION/health"
 echo
 echo
-
+: <<'EOF'
 curl "$BASE_URL_ANALYTICS/health"
 echo
 echo
@@ -254,7 +254,7 @@ cat response.json
 
 echo ""
 echo ""
-: <<'EOF'
+
 echo "========================================"
 echo "10. Testando a fila SQS e o processamento"
 echo "========================================"
@@ -327,5 +327,3 @@ echo "Flag removida com sucesso."
 echo ""
 echo ""
 echo "TESTE FINALIZADO COM SUCESSO"
-
-EOF
