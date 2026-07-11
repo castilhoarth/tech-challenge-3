@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: flag-service
+  namespace: toggle-prod
+spec:
+  type: ClusterIP
+  selector:
+    app: flag-service
+  ports:
+    - port: 8002
+      targetPort: 8002
+      protocol: TCP

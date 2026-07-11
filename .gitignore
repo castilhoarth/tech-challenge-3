@@ -6,6 +6,7 @@ docker/targeting-service-main/_doc ajustes para rodar
 docker/evaluation-service-main/_docs ajustes para rodar
 doc
 k8s/auth-service/secret.yaml
+k8s/flag-service/flag-secret.yaml
 k8s/senhas
 k8s/comandos
 k8s/ECR
