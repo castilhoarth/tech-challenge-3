@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: analytics-service
+  namespace: toggle-prod
+
+spec:
+
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: analytics-service
+
+
+  template:
+
+    metadata:
+      labels:
+        app: analytics-service
+
+
+    spec:
+
+      containers:
+
+        - name: analytics-service
+
+          image: 708993007071.dkr.ecr.us-east-1.amazonaws.com/analytics-service:latest
+
+          imagePullPolicy: Always
+
+
+          ports:
+
+            - containerPort: 8005
+
+
+          envFrom:
+
+            - configMapRef:
+                name: analytics-config
+
+            - secretRef:
+                name: analytics-secret
+
+
+          resources:
+
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+
+
+          readinessProbe:
+
+            httpGet:
+              path: /health
+              port: 8005
+
+            initialDelaySeconds: 10
+            periodSeconds: 5
+
+
+
+          livenessProbe:
+
+            httpGet:
+              path: /health
+              port: 8005
+
+            initialDelaySeconds: 30
+            periodSeconds: 10
