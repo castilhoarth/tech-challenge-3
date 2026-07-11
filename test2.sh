@@ -23,8 +23,6 @@ echo "========================================"
 echo "AMBIENTE DE TESTE"
 echo "========================================"
 echo "AUTH      : $BASE_URL_AUTH"
-
-
 echo "FLAG      : $BASE_URL_FLAG"
 echo "TARGETING : $BASE_URL_TARGETING"
 : <<'EOF'
@@ -51,10 +49,10 @@ curl "$BASE_URL_FLAG/health"
 echo
 echo
 
+
 curl "$BASE_URL_TARGETING/health"
 echo
 echo
-
 : <<'EOF'
 curl "$BASE_URL_EVALUATION/health"
 echo
@@ -184,8 +182,6 @@ fi
 cat response.json
 
 echo ""
-echo ""
-
 echo "========================================"
 echo "7. Criando Regra de Targeting"
 echo "========================================"
