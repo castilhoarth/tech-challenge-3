@@ -2,6 +2,26 @@
 
 
 
+[Objetivo do Projeto](##2-objetivo-do-projeto)
+
+[Teste Local e criação dos Dockerfiles](##3-execução-local-e-criação-dos-dockerfiles)
+
+[Infraestrutura na Nuvem (Console AWS e eksctl)](#4-infraestrutura-na-nuvem-console-aws-e-eksctl)
+
+[Escalabilidade Horizontal](#5-escalabilidade-horizontal)
+
+[Orquestração e Implantação (Manifestos)](#6-orquestração-e-implantação-manifestos)
+
+[Testes da Aplicação no Cloud e Escalabilidade](#testes-da-aplicação-no-cloud-e-escalabilidade)
+
+[Arquitetura e Desafios Encontrados](#7-arquitetura-e-desafios-encontrados)
+
+[Diferença de Bancos](#8-diferença-de-bancos)
+
+[Vídeo de Apresentação](#9-vídeo-de-apresentação)
+
+
+
 ## **1. Identificação do Projeto**
 
 - **Projeto:** Toggle Master Microservices
@@ -14,7 +34,9 @@
   - Pedro Vinicius Araujo Negreiros - RM372553 - [pedro28vinicius@hotmail.com](mailto:pedro28vinicius@hotmail.com)
 
 
-## 2. Projeto
+
+
+## 2. Objetivo do Projeto
 
 A arquitetura foi dividida nos em 5 microsserviços:
 
@@ -2157,9 +2179,9 @@ Dados da tabela:
 
 
 
-### 6 Testes da Aplicação no Cloud e Escalabilidade
+### Testes da Aplicação no Cloud e Escalabilidade
 
-### Script de Teste
+#### Script de Teste
 
 Para os testes foi usado um script em Bash, tanto para os microserviços quanto para a carga.
 
@@ -2519,9 +2541,27 @@ echo ""
 echo "TESTE FINALIZADO COM SUCESSO"
 ```
 
-### Testes de Escalabilidade:
+Resultados do Teste sem a etapa de carga:
 
-### Preparação
+![image-20260712144551447](./img/image-20260712144551447.png)
+
+![image-20260712144616010](./img/image-20260712144616010.png)
+
+Validando o processamento do evaluation:
+
+kubectl logs deployment/evaluation-service -n toggle-prod
+
+![image-20260712144918502](./img/image-20260712144918502.png)
+
+Validando o processamento dentro do Analytics:
+
+kubectl logs deployment/analytics-service -n toggle-prod
+
+![image-20260712145030465](./img/image-20260712145030465.png)
+
+#### Testes de Escalabilidade:
+
+##### Preparação
 
 Desativamos o pod do Analytics para que acumule fila no sqs e escale ao iniciar.
 
@@ -2531,13 +2571,13 @@ kubectl scale deployment analytics-service \
 --replicas=0
 ```
 
-Estado inicial:
+##### Estado inicial:
 
 ![image-20260712135959720](./img/image-20260712135959720.png)
 
-Rodamos o test2.sh
+Rodamos o test2.sh com a etapa de carga
 
-Resultados e Monitoramento
+##### Resultados e Monitoramento
 
 watch kubectl get pods -n toggle-prod -o wide
 
