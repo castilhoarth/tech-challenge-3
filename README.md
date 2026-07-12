@@ -56,12 +56,7 @@ A missão desse projeto é projetar e implementar a infraestrutura de contêiner
 
 Preparação de cada microserviço, para rodar localmente, criando os DockerFiles e rodando através de Dockercompose.
 
-toggle-master-microservices/
-├── auth-service-main/
-├── flag-service-main/
-├── targeting-service-main/
-├──  evaluation-service-main/
-└── analytics-service-main/
+![image-20260712150534788](./img/image-20260712150534788.png)
 
 ### 3.1 auth-service
 
