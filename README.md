@@ -2698,11 +2698,11 @@ Foi definido apenas um namespace para os 5 microserviçoes de forma a simplifica
 
 ## 8 Diferença de Bancos
 
-PostgreSQL (RDS) → usado nos serviços que precisam de dados críticos e relacionais (auth, flag, targeting).
+PostgreSQL (RDS) usado nos serviços que precisam de dados críticos e relacionais (auth, flag, targeting).
 
-Redis (ElastiCache) → usado no serviço que precisa de velocidade máxima (evaluation).
+Redis (ElastiCache) usado no serviço que precisa de velocidade máxima (evaluation).
 
-SQS + DynamoDB → usados no serviço que precisa lidar com grande volume de eventos e escalar horizontalmente (analytics).
+SQS + DynamoDB usados no serviço que precisa lidar com grande volume de eventos e escalar horizontalmente (analytics).
 
 **Justificativa por serviço**
 
