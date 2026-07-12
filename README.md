@@ -2698,7 +2698,38 @@ Foi definido apenas um namespace para os 5 microserviçoes de forma a simplifica
 
 ## 8 Diferença de Bancos
 
- 
+PostgreSQL (RDS) → usado nos serviços que precisam de dados críticos e relacionais (auth, flag, targeting).
+
+Redis (ElastiCache) → usado no serviço que precisa de velocidade máxima (evaluation).
+
+SQS + DynamoDB → usados no serviço que precisa lidar com grande volume de eventos e escalar horizontalmente (analytics).
+
+**Justificativa por serviço**
+
+auth-service → RDS PostgreSQL (auth-db)
+  Precisa armazenar usuários, credenciais e chaves de API.
+  Esses dados são críticos e relacionais (usuário ↔ chave ↔ permissões).
+  O PostgreSQL garante consistência forte (ACID), ideal para autenticação.
+
+flag-service → RDS PostgreSQL (flag-db)
+  Gerencia feature flags (ativadas/desativadas).
+  Flags podem ter relacionamentos complexos (ex.: flag ligada a um produto ou versão).
+  O modelo relacional facilita consultas e garante integridade.
+
+targeting-service → RDS PostgreSQL (targeting-db)
+  Define regras de segmentação (ex.: “usuários do Brasil recebem a flag X”).
+  Essas regras são estruturadas e relacionais, exigindo consistência.
+  PostgreSQL é ideal para armazenar e consultar regras com filtros complexos.
+
+evaluation-service → ElastiCache Redis
+  Precisa responder muito rápido se uma flag está ativa ou não.
+  Redis guarda dados em memória, com latência baixíssima.
+  Não é usado para persistência, mas sim como cache para decisões instantâneas.
+
+analytics-service → Amazon SQS + DynamoDB
+  Recebe eventos massivos (ex.: quantas vezes uma flag foi avaliada).
+  O SQS desacopla produtores e consumidores, garantindo que nenhum evento se perca.
+  O DynamoDB armazena milhões de registros de forma escalável e distribuída, ideal para análises.
 
 
 
