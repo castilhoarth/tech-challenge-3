@@ -815,13 +815,7 @@ O Fluxo está rodando corretamente:
 
 <img src="./img/image-20260614124731715.png" alt="image-20260614124731715" style="zoom:150%;" />
 
-**Imagens criadas:**
-
-toggle-master-microservices-analytics-service:latest	   012ebacb2e0a   	 248MB     64.2MB   
-toggle-master-microservices-auth-service:latest		  cd361ad804a3	    30.4MB     9.84MB 
-toggle-master-microservices-evaluation-service:latest	8f80056de74d	    35.7MB    10.2MB 
-toggle-master-microservices-flag-service:latest                     f530966ce82e   	 210MB      51.3MB  
-toggle-master-microservices-targeting-service:latest           7357954d7e9e   	210MB      51.3MB  
+![image-20260712145620620](./img/image-20260712145620620.png)
 
 
 
