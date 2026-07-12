@@ -2692,6 +2692,7 @@ Foi definido apenas um namespace para os 5 microserviçoes de forma a simplifica
 
 ### 7.7 Arquitetura
 
+<img width="1523" height="849" alt="image" src="https://github.com/user-attachments/assets/50c68322-cfd8-4a24-91fb-e5e62c190adf" />
 
 
 ## 8 Diferença de Bancos
