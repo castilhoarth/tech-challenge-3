@@ -2170,6 +2170,16 @@ Dados da tabela:
 
 ### Testes da Aplicação no Cloud e Escalabilidade
 
+#### Status do Ambiente:
+
+##### Pods Ativos
+
+![image-20260712151736796](./img/image-20260712151736796.png)
+
+##### Nodes ativos
+
+![image-20260712151831577](./img/image-20260712151831577.png)
+
 #### Script de Teste
 
 Para os testes foi usado um script em Bash, tanto para os microserviços quanto para a carga.
