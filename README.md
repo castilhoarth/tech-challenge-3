@@ -2725,18 +2725,24 @@ SQS + DynamoDB → usados no serviço que precisa lidar com grande volume de eve
 **targeting-service → RDS PostgreSQL (targeting-db)**
 
   Define regras de segmentação (ex.: “usuários do Brasil recebem a flag X”).
+  
   Essas regras são estruturadas e relacionais, exigindo consistência.
+  
   PostgreSQL é ideal para armazenar e consultar regras com filtros complexos.
 
 **evaluation-service → ElastiCache Redis**
 
   Precisa responder muito rápido se uma flag está ativa ou não.
+  
   Redis guarda dados em memória, com latência baixíssima.
+  
   Não é usado para persistência, mas sim como cache para decisões instantâneas.
 
-analytics-service → Amazon SQS + DynamoDB
+**analytics-service → Amazon SQS + DynamoDB**
   Recebe eventos massivos (ex.: quantas vezes uma flag foi avaliada).
+  
   O SQS desacopla produtores e consumidores, garantindo que nenhum evento se perca.
+  
   O DynamoDB armazena milhões de registros de forma escalável e distribuída, ideal para análises.
 
 
