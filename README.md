@@ -6,7 +6,13 @@
 
 - **Projeto:** Toggle Master Microservices
 - **Fase:** 02 - Microserviços e Infraestrutura AWS
-- **Integrantes:** Turma 3DLC - Grupo 53
+- **Integrantes:** Grupo 53
+  - Arthur de Castilho Nascimento - RM371601 - [castartx@gmail.com](mailto:castartx@gmail.com)
+  - Gerusa Fernandes Lobo Nogueira - RM367568 - [gerusalobo@gmail.com](mailto:gerusalobo@gmail.com)
+  - Lorenzo Ghisi de Figueiredo - RM372288 - [http.figueiredo@gmail.com](mailto:http.figueiredo@gmail.com)
+  - José Henrique Cavalcanti de Melo Filho -  RM 372074 - [meloricke.bra@gmail.com](mailto:meloricke.bra@gmail.com)
+  - Pedro Vinicius Araujo Negreiros - RM372553 - [pedro28vinicius@hotmail.com](mailto:pedro28vinicius@hotmail.com)
+
 
 ## 2. Projeto
 
@@ -76,9 +82,9 @@ CMD ["./auth-service"]
 
 Imagem: 30.4MB
 
-[Dockerfile](auth-service-main/Dockerfile)
+[Dockerfile](docker/auth-service-main/Dockerfile)
 
-[ReadMe do Auth Service](auth-service-main/README.md)
+[ReadMe do Auth Service](docker/auth-service-main/README.md)
 
 Durante a ativação local, foram identificados alguns ajustes necessários para que a aplicação rodasse:
 
@@ -198,9 +204,9 @@ CMD ["gunicorn", "--bind", "0.0.0.0:8002", "app:app"]
 
 Imagem: 210MB
 
-[Dockerfile](flag-service-main/Dockerfile)
+[Dockerfile](docker/flag-service-main/Dockerfile)
 
-[ReadMe do Flag Service](flag-service-main/README.md)
+[ReadMe do Flag Service](docker/flag-service-main/README.md)
 
 No docker-compose, foi necessário colocar as dependências do auth e banco:
 
@@ -296,9 +302,9 @@ CMD ["gunicorn", "--bind", "0.0.0.0:8003", "app:app"]
 ```
 Imagem: 210M
 
-[Dockerfile](targeting-service-main/Dockerfile)
+[Dockerfile](docker/targeting-service-main/Dockerfile)
 
-[ReadMe do Targeting Service](targeting-service-main/README.md)
+[ReadMe do Targeting Service](docker/targeting-service-main/README.md)
 
 No docker-compose, foi necessário colocar as dependências do auth e banco:
 
@@ -402,9 +408,9 @@ CMD ["gunicorn", "--bind", "0.0.0.0:8005", "app:app"]
 
 Imagem: 35.7MB
 
-[Dockerfile](evaluation-service-main/Dockerfile)
+[Dockerfile](docker/evaluation-service-main/Dockerfile)
 
-[ReadMe do Evaluation Service](evaluation-service-main/README.md)
+[ReadMe do Evaluation Service](docker/evaluation-service-main/README.md)
 
 Foi criado também um .env para as variáveis de ambiente.
 
@@ -587,9 +593,9 @@ EXPOSE 8005
 
 CMD ["gunicorn", "--bind", "0.0.0.0:8005", "app:app"]
 ```
-[Dockerfile](analytics-service-main/Dockerfile)
+[Dockerfile](docker/analytics-service-main/Dockerfile)
 
-[ReadMe do Analytics Service](analytics-service-main/README.md)
+[ReadMe do Analytics Service](docker/analytics-service-main/README.md)
 
 No docker-compose, foram colocadas as dependências com os outros serviços e as variáveis de ambiente:
 
@@ -631,7 +637,7 @@ O dynamodb precisa rodar com o user: root senão não persiste os dados no banco
 
 Para o teste local, foi criado um dockercompose e uma rede local, assim como volumes para o auth, flags e targeting services.
 
-[docker-compose](./docker-compose.yml)
+[docker-compose](./docker/docker-compose.yml)
 
 Foi criado um plano de teste em bash para testar os serviços: auth, flags, targeting e evaluation.
 
@@ -787,9 +793,17 @@ O Fluxo está rodando corretamente:
 
 <img src="./img/image-20260614124731715.png" alt="image-20260614124731715" style="zoom:150%;" />
 
+**Imagens criadas:**
+
+toggle-master-microservices-analytics-service:latest	   012ebacb2e0a   	 248MB     64.2MB   
+toggle-master-microservices-auth-service:latest		  cd361ad804a3	    30.4MB     9.84MB 
+toggle-master-microservices-evaluation-service:latest	8f80056de74d	    35.7MB    10.2MB 
+toggle-master-microservices-flag-service:latest                     f530966ce82e   	 210MB      51.3MB  
+toggle-master-microservices-targeting-service:latest           7357954d7e9e   	210MB      51.3MB  
+
+
+
 ### 3.7 Deploy do Repositório e Teste Local
-
-
 
 Depois do clone do Repositório, é preciso criar um .env com os seguintes dados:
 
@@ -839,5 +853,1814 @@ Para a primeira execução é necessário:
 
 Na sequencia, dar o comando: docker compose down e, depois um docker compose up.
 
+## 4. Infraestrutura na Nuvem (Console AWS e eksctl)
+
+**Resumo da Infraestrutura AWS – Toggle Master Microservices**
+
+**Região AWS**
+
+AWS_REGION=us-east-1
+
+###  4.1 Configuração do Cluster e da Escalabilidade dos Nós
+
+![27a11a8f-aa29-480e-8dd5-19e9c6fbcc51](./img/27a11a8f-aa29-480e-8dd5-19e9c6fbcc51.png)
+
+Por usar nodes t3-micro (free tier), tivemos dificuldade com a instalação do nginx com a quantidade de pods que cabe nos nodes (apenas 4 por node). 
+
+**Dessa forma alteramos a escalabilidade do projeto para 6,8 e 12 nodes.**
+
+![image-20260712131617632](./img/image-20260712131617632.png)
+
+![image-20260712131636818](./img/image-20260712131636818.png)
+
+#### Ativação das Métricas
+
+![image-20260712131656084](./img/image-20260712131656084.png)
+
+Observações: 
+
+- Para o Evaluation estamos usando o método HPA
+- Para o Analytics o KEDA
+
+#### Nginx Ingress Controller
+
+A ativação do Nginx foi através de comandos:
+
+```
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+
+helm install ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx \
+  --set controller.service.type=LoadBalancer \
+  --set controller.publishService.enabled=true \
+  --set controller.admissionWebhooks.enabled=false
+```
+
+![image-20260712131715372](./img/image-20260712131715372.png)
+
+### 4.2 Registro dos Containers (ECR)
+
+Foram criados os seguintes repositórios para armazenamento das imagens Docker dos microsserviços:
+
+| **Microsserviço**  | **Repositório ECR** | **URI**                                                      |
+| ------------------ | ------------------- | ------------------------------------------------------------ |
+| auth-service       | auth-service        | [708993007071.dkr.ecr.us-east-1.amazonaws.com/auth-service](http://708993007071.dkr.ecr.us-east-1.amazonaws.com/auth-service) |
+| flag-service       | flag-service        | [708993007071.dkr.ecr.us-east-1.amazonaws.com/flag-service](http://708993007071.dkr.ecr.us-east-1.amazonaws.com/flag-service) |
+| targeting-service  | targeting-service   | [708993007071.dkr.ecr.us-east-1.amazonaws.com/targeting-service](http://708993007071.dkr.ecr.us-east-1.amazonaws.com/targeting-service) |
+| evaluation-service | evaluation-service  | [708993007071.dkr.ecr.us-east-1.amazonaws.com/evaluation-service](http://708993007071.dkr.ecr.us-east-1.amazonaws.com/evaluation-service) |
+| analytics-service  | analytics-service   | [708993007071.dkr.ecr.us-east-1.amazonaws.com/analytics-service](http://708993007071.dkr.ecr.us-east-1.amazonaws.com/analytics-service) |
+
+Para subir as imagens foi feito o push de cada uma.
+
+![image-20260712131729429](./img/image-20260712131729429.png)
+
+![image-20260712131758844](./img/image-20260712131758844.png)
+
+![image-20260712131813549](./img/image-20260712131813549.png)
+
+### 4.3 Criação dos Bancos RDS, Dynamo, SQS e  Redis
+
+Criando os bancos RDS e o Redis dentro da mesma VPC do cluster
+
+VPC Cluster: "vpc-0fc2987e3d0de4c7c"
+
+**DB-subnet Group**
+
+```
+aws rds create-db-subnet-group \
+  --db-subnet-group-name toggle-prod-db-subnet-group \
+  --db-subnet-group-description "Subnet group for ToggleMaster production databases" \
+  --subnet-ids \
+    subnet-05b043efc02142437 \
+    subnet-0a4b8a833c180a8b3 \
+    subnet-0b6d71475b7a04865 \
+    subnet-09744adccb3f6691c \
+  --region us-east-1 \
+  --profile prod
+```
+
+![image-20260712131835121](./img/image-20260712131835121.png)
+
+**Security group**
+
+Criar e vincular ao sg do cluster
+
+- VPC: `vpc-0fc2987e3d0de4c7c`
+- Subnet Group: `toggle-prod-db-subnet-group`
+- SG: `sg-028b6a777708d9e14`
+
+![image-20260712131901945](./img/image-20260712131901945.png)
+
+Criação dos Bancos RDS via CLI:
+
+```
+aws rds create-db-instance \
+  --db-instance-identifier auth-db \
+  --db-instance-class db.t3.micro \
+  --engine postgres \
+  --engine-version 16 \
+  --allocated-storage 20 \
+  --storage-type gp3 \
+  --master-username postgres \
+  --master-user-password 'SenhaForte123!' \
+  --db-subnet-group-name toggle-prod-db-subnet-group \
+  --vpc-security-group-ids sg-028b6a777708d9e14 \
+  --no-publicly-accessible \
+  --backup-retention-period 0 \
+  --region us-east-1 \
+  --profile prod
+```
+
+Arquitetura
+
+![image-20260712131931602](./img/image-20260712131931602.png)
+
+#### **Amazon RDS (PostgreSQL)**
+
+**Auth Service**
+
+- **Instância:** auth-db
+- **Banco:** auth-db
+- **Engine:** PostgreSQL
+- **Endpoint:** [auth-db.cs5ayiqio5aa.us-east-1.rds.amazonaws.com](http://auth-db.cs5ayiqio5aa.us-east-1.rds.amazonaws.com/)
+- **String de Conexão:** postgres://postgres:SENHA@auth-db.cs5ayiqio5aa.us-east-1.rds.amazonaws.com:5432/auth-db?sslmode=require
+- **Porta:** 5432
+- **Status:** available
+
+criando o banco e as tabelas:
+
+postgres=> CREATE DATABASE "auth-db";
+
+![image-20260712132000005](./img/image-20260712132000005.png)
+
+E a tabela, conforme comando do init.sql do microserviço auth-service
+
+![image-20260712132016319](./img/image-20260712132016319.png)
+
+⸻
+
+**Flag Service**
+
+- **Instância:** flag-db
+- **Banco:** flag-db
+- **Engine:** PostgreSQL
+- **Endpoint:** [flag-db.cs5ayiqio5aa.us-east-1.rds.amazonaws.com](http://flag-db.cs5ayiqio5aa.us-east-1.rds.amazonaws.com/)
+- **String de Conexão:** postgres://postgres:SenhaForte123!@flag-db.cs5ayiqio5aa.us-east-1.rds.amazonaws.com:5432/flag-db?sslmode=require
+- **Porta:** 5432
+- **Status:** available
+
+criando o banco e as tabelas
+
+![image-20260712132040481](./img/image-20260712132040481.png)
+
+⸻
+
+**Targeting Service**
+
+Devido à limitação de quota da conta AWS (máximo de instâncias RDS permitidas), o banco do **targeting-service** foi criado como um banco separado dentro da instância **flag-db**.
+
+**Database:** targeting_db
+
+![image-20260712132100554](./img/image-20260712132100554.png)
+
+Criando o banco e as tabelas:
+
+![image-20260712132126215](./img/image-20260712132126215.png)
+
+**String de conexão:**
+
+postgres://postgres:SenhaForte123!@flag-db.cs5ayiqio5aa.us-east-1.rds.amazonaws.com:5432/targeting-db?sslmode=require
+
+Credenciais:
+--master-username postgres 
+--master-user-password 'SenhaForte123!'
+
+Observação:
+
+Para a criação dos bancos e tabelas, subimos um pod temporário postgres-client dentro do cluster e usamos para acessar os bancos postgres:
+
+```
+kubectl run postgres-client \
+  --image=postgres:18 \
+  -n toggle-prod \
+  --rm -it \
+  -- bash
+E dentro do terminal do pod, acessar os bancos via psql:
+psql \
+-h auth-db.cs5ayiqio5aa.us-east-1.rds.amazonaws.com \
+-U postgres \
+-d postgres \
+-p 5432
+```
+
+⸻
+
+**Amazon ElastiCache (Redis)**
+
+Criando o SG e vinculando com o cluster.
+
+![image-20260712132147410](./img/image-20260712132147410.png)
+
+Criando a subnet
+
+```
+aws elasticache create-cache-subnet-group \
+  --cache-subnet-group-name toggle-prod-redis-subnet-group \
+  --cache-subnet-group-description "Redis subnet group for ToggleMaster production" \
+  --subnet-ids \
+    subnet-05b043efc02142437 \
+    subnet-0a4b8a833c180a8b3 \
+    subnet-0b6d71475b7a04865 \
+    subnet-09744adccb3f6691c \
+  --region us-east-1 \
+  --profile prod
+```
+
+![image-20260712132532612](./img/image-20260712132532612.png)
+
+E criando o Redis:
+
+```
+aws elasticache create-cache-cluster \
+  --cache-cluster-id evaluation-service-redis \
+  --engine redis \
+  --engine-version 7.1 \
+  --cache-node-type cache.t3.micro \
+  --num-cache-nodes 1 \
+  --cache-subnet-group-name toggle-prod-redis-subnet-group \
+  --security-group-ids sg-01a955339afbd9825 \
+  --region us-east-1 \
+  --profile prod
+```
+
+![image-20260712132550688](./img/image-20260712132550688.png)
+
+**Cluster:** evaluation-service-redis
+
+**Endpoint:** [evaluation-service-redis.yumvds.0001.use1.cache.amazonaws.com](http://evaluation-service-redis.yumvds.0001.use1.cache.amazonaws.com/)
+
+**Porta:** 6379
+
+**Utilizado pelo:** evaluation-service
+
+⸻
+
+**Amazon DynamoDB**
+
+**Tabela:** ToggleMasterAnalytics
+
+**Partition Key:** event_id
+
+**Tipo:** String (S)
+
+**ARN:** arn:aws:dynamodb:us-east-1:708993007071:table/ToggleMasterAnalytics
+
+**Status:** ACTIVE
+
+⸻
+
+**Amazon SQS**
+
+**Nome da fila:** evaluation-analytics-queue
+
+**Tipo:** Standard
+
+**URL:** https://sqs.us-east-1.amazonaws.com/708993007071/evaluation-analytics-queue
+
+**ARN:** arn:aws:sqs:us-east-1:708993007071:evaluation-analytics-queue
+
+**Utilização**
+
+**Produtor**
+
+- evaluation-service
+
+**Consumidor**
+
+- analytics-service
+
+Fluxo:
+
+evaluation-service
+
+​    │
+
+​    ▼
+
+Amazon SQS
+
+​    │
+
+​    ▼
+
+analytics-service
+
+​    │
+
+​    ▼
+
+Amazon DynamoDB
+
+⸻
+
+#### **Variáveis de Ambiente**
+
+**auth-service**
+
+AWS_REGION=us-east-1
+
+DATABASE_URL=postgres://postgres:SenhaForte123!@auth-db.cs5ayiqio5aa.us-east-1.rds.amazonaws.com:5432/auth-db?sslmode=require
+
+Master Key: `admin-secreto-123`
+
+⸻
+
+**flag-service**
+
+AWS_REGION=us-east-1
+
+DATABASE_URL=postgres://postgres:SenhaForte123!@flag-db.cs5ayiqio5aa.us-east-1.rds.amazonaws.com:5432/flag-db?sslmode=require
+
+⸻
+
+**targeting-service**
+
+AWS_REGION=us-east-1
+
+DATABASE_URL=postgres://postgres:SenhaForte123!@flag-db.cs5ayiqio5aa.us-east-1.rds.amazonaws.com:5432/targeting-db?sslmode=require
+
+⸻
+
+**evaluation-service**
+
+AWS_REGION=us-east-1
+
+REDIS_HOST=[evaluation-service-redis.yumvds.0001.use1.cache.amazonaws.com](http://evaluation-service-redis.yumvds.0001.use1.cache.amazonaws.com/)
+
+REDIS_PORT=6379
+
+AWS_SQS_URL=https://sqs.us-east-1.amazonaws.com/708993007071/evaluation-analytics-queue
+
+⸻
+
+**analytics-service**
+
+AWS_REGION=us-east-1
+
+AWS_SQS_URL=https://sqs.us-east-1.amazonaws.com/708993007071/evaluation-analytics-queue
+
+AWS_DYNAMODB_TABLE=ToggleMasterAnalytics
+
+⸻
+
+**Recursos Provisionados**
+
+| **Serviço AWS**    | **Recurso**                                         |
+| ------------------ | --------------------------------------------------- |
+| Amazon ECR         | 5 repositórios                                      |
+| Amazon RDS         | 2 instâncias PostgreSQL + 1 database (targeting_db) |
+| Amazon ElastiCache | 1 cluster Redis                                     |
+| Amazon DynamoDB    | 1 tabela (ToggleMasterAnalytics)                    |
+| Amazon SQS         | 1 fila Standard (evaluation-analytics-queue)        |
+
+⸻
+
+**Strings de Conexão Utilizadas na Próxima Etapa**
+
+**auth-db**
+
+postgres://postgres:SenhaForte123!@auth-db.cs5ayiqio5aa.us-east-1.rds.amazonaws.com:5432/auth-db?sslmode=require
+
+**flag-db**
+
+postgres://postgres:SenhaForte123!@flag-db.cs5ayiqio5aa.us-east-1.rds.amazonaws.com:5432/flag-db?sslmode=require
+
+**targeting-db**
+
+postgres://postgres:SenhaForte123!@flag-db.cs5ayiqio5aa.us-east-1.rds.amazonaws.com:5432/targeting-db?sslmode=require
+
+**Redis**
+
+"[evaluation-service-redis.yumvds.0001.use1.cache.amazonaws.com](http://evaluation-service-redis.yumvds.0001.use1.cache.amazonaws.com/)"
+
+**DynamoDB**
+
+Tabela: ToggleMasterAnalytics
+
+ARN: arn:aws:dynamodb:us-east-1:708993007071:table/ToggleMasterAnalytics
+
+**Amazon SQS**
+
+**URL:** https://sqs.us-east-1.amazonaws.com/708993007071/evaluation-analytics-queue
+
+**ARN:** arn:aws:sqs:us-east-1:708993007071:evaluation-analytics-queue
+
+⸻
+
+**Observação:**
+
+A limitação da conta AWS impediu a criação de uma terceira instância RDS. Como alternativa, foi criado o banco targeting_db dentro da instância flag-service-db, mantendo o isolamento lógico entre os serviços e permitindo a continuidade do deployment.
+
+Esse documento já está completo e pode ser usado como referência para a próxima etapa de configuração e deployment dos microsserviços na AWS.
+
+## 5 Escalabilidade Horizonal
+
+Foram utilizadas duas estratégias de escalabilidade.
+
+**HPA (Horizontal Pod Autoscaler)**
+
+- evaluation-service
+
+Escala baseado na utilização de CPU.
+
+**KEDA**
+
+- analytics-service
+
+Escala automaticamente baseado na quantidade de mensagens existentes na fila SQS.
+
+Dessa forma o Analytics permanece com apenas uma réplica em momentos sem carga e aumenta automaticamente durante os testes.
+
+Foi instalado o Keda para uso no Analytics
+
+![image-20260712132637050](./img/image-20260712132637050.png)
+
+Pods do KEDA:
+
+![image-20260712132720807](./img/image-20260712132720807.png)
+
+Componentes:
+
+![image-20260712132738172](./img/image-20260712132738172.png)
+
+E para o Evaluation foi usado o HPA
+
+![image-20260712132751674](./img/image-20260712132751674.png)
+
+## 6 Orquestração e Implantação (Manifestos)
+
+Para ter um único ingress e uma unica url de saída, foi usado um único namespace.
+
+Por questão de economia de nodes, decidimos usar apenas 1 replica para cada microserviço, e no caso do Evaluation e Analitics em case de sobrecarga, pode escalar até 5.
+
+### Namespace.yaml
+
+```
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: toggle-prod
+```
+
+[namespace.yaml](k8s/namespace.yaml)
+
+Deploy:
+
+kubectl apply -f k8s/namespace.yaml
+
+### Ingress/Ingress.yaml
+
+```
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: togglemaster-ingress
+  namespace: toggle-prod
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /auth(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: auth-service
+                port:
+                  number: 8001
+          - path: /flags(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: flag-service
+                port:
+                  number: 8002
+          - path: /targeting(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: targeting-service
+                port:
+                  number: 8003
+          - path: /evaluation(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: evaluation-service
+                port:
+                  number: 8004
+          - path: /analytics(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: analytics-service
+                port:
+                  number: 8005
+```
+
+[ingress.yaml](k8s/ingress/ingress.yaml)
+
+#### Deploy:
+
+![image-20260712132854747](./img/image-20260712132854747.png)
+
+![image-20260712132908679](./img/image-20260712132908679.png)
+
+### cluster-autoscaler.yaml
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"labels":{"app":"cluster-autoscaler"},"name":"cluster-autoscaler","namespace":"kube-system"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"cluster-autoscaler"}},"template":{"metadata":{"annotations":{"prometheus.io/port":"8085","prometheus.io/scrape":"true"},"labels":{"app":"cluster-autoscaler"}},"spec":{"containers":[{"command":["./cluster-autoscaler","--v=4","--stderrthreshold=info","--cloud-provider=aws","--skip-nodes-with-local-storage=false","--expander=least-waste","--node-group-auto-discovery=asg:tag=k8s.io/cluster-autoscaler/enabled,k8s.io/cluster-autoscaler/feature-flags-cluster","--balance-similar-node-groups","--skip-nodes-with-system-pods=false"],"image":"registry.k8s.io/autoscaling/cluster-autoscaler:v1.28.2","imagePullPolicy":"Always","name":"cluster-autoscaler","resources":{"limits":{"cpu":"100m","memory":"600Mi"},"requests":{"cpu":"100m","memory":"600Mi"}},"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"readOnlyRootFilesystem":true},"volumeMounts":[{"mountPath":"/etc/ssl/certs/ca-certificates.crt","name":"ssl-certs","readOnly":true}]}],"nodeSelector":{"kubernetes.io/os":"linux"},"priorityClassName":"system-cluster-critical","securityContext":{"fsGroup":65534,"runAsNonRoot":true,"runAsUser":65534,"seccompProfile":{"type":"RuntimeDefault"}},"serviceAccountName":"cluster-autoscaler","volumes":[{"hostPath":{"path":"/etc/ssl/certs/ca-bundle.crt"},"name":"ssl-certs"}]}}}}
+  creationTimestamp: "2026-07-11T17:27:00Z"
+  generation: 1
+  labels:
+    app: cluster-autoscaler
+  name: cluster-autoscaler
+  namespace: kube-system
+  resourceVersion: "2784060"
+  uid: a170d36d-254a-432b-a5f4-1c3bbecdf87b
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: cluster-autoscaler
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        prometheus.io/port: "8085"
+        prometheus.io/scrape: "true"
+      labels:
+        app: cluster-autoscaler
+    spec:
+      containers:
+      - command:
+        - ./cluster-autoscaler
+        - --v=4
+        - --stderrthreshold=info
+        - --cloud-provider=aws
+        - --skip-nodes-with-local-storage=false
+        - --expander=least-waste
+        - --node-group-auto-discovery=asg:tag=k8s.io/cluster-autoscaler/enabled,k8s.io/cluster-autoscaler/feature-flags-cluster
+        - --balance-similar-node-groups
+        - --skip-nodes-with-system-pods=false
+        image: registry.k8s.io/autoscaling/cluster-autoscaler:v1.28.2
+        imagePullPolicy: Always
+        name: cluster-autoscaler
+        resources:
+          limits:
+            cpu: 100m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /etc/ssl/certs/ca-certificates.crt
+          name: ssl-certs
+          readOnly: true
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: system-cluster-critical
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccount: cluster-autoscaler
+      serviceAccountName: cluster-autoscaler
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - hostPath:
+          path: /etc/ssl/certs/ca-bundle.crt
+          type: ""
+        name: ssl-certs
+status:
+  conditions:
+  - lastTransitionTime: "2026-07-11T17:27:00Z"
+    lastUpdateTime: "2026-07-11T17:27:00Z"
+    message: Deployment does not have minimum availability.
+    reason: MinimumReplicasUnavailable
+    status: "False"
+    type: Available
+  - lastTransitionTime: "2026-07-11T17:37:01Z"
+    lastUpdateTime: "2026-07-11T17:37:01Z"
+    message: ReplicaSet "cluster-autoscaler-555d4dbcb7" has timed out progressing.
+    reason: ProgressDeadlineExceeded
+    status: "False"
+    type: Progressing
+  observedGeneration: 1
+  replicas: 1
+  terminatingReplicas: 0
+  unavailableReplicas: 1
+  updatedReplicas: 1
+```
+
+[cluster-autoscaler.yaml](k8s/cluster-autoscaler.yaml)
+
+### Auth-Service
+
+[Auth-Service](k8s/auth-service/)
+
+#### Configmap.yaml
+
+```
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-config
+  namespace: toggle-prod
+data:
+  PORT: "8001"
+```
+
+#### Deployment.yaml
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: toggle-prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      containers:
+        - name: auth-service
+          image: 708993007071.dkr.ecr.us-east-1.amazonaws.com/auth-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8001
+          envFrom:
+            - configMapRef:
+                name: auth-config
+            - secretRef:
+                name: auth-secret
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+```
+
+#### secret.yaml
+
+```
+apiVersion: v1
+kind: Secret
+metadata:
+  name: auth-secret
+  namespace: toggle-prod
+type: Opaque
+data:
+  DATABASE_URL: cG9zdGdyZXM6Ly9wb3N0Z3JlczpTZW5oYUZvcnRlMTIzIUBhdXRoLWRiLmNzNWF5aXFpbzVhYS51cy1lYXN0LTEucmRzLmFtYXpvbmF3cy5jb206NTQzMi9hdXRoLWRiP3NzbG1vZGU9cmVxdWlyZQ==
+  MASTER_KEY: YWRtaW4tc2VjcmV0by0xMjM=
+```
+
+#### service.yaml
+
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: toggle-prod
+spec:
+  type: ClusterIP
+  selector:
+    app: auth-service
+  ports:
+    - port: 8001
+      targetPort: 8001
+      protocol: TCP
+```
+
+Deploy:
+
+```
+kubectl apply -f k8s/auth-service/configmap.yaml
+kubectl apply -f k8s/auth-service/secret.yaml
+kubectl apply -f k8s/auth-service/service.yaml
+kubectl apply -f k8s/auth-service/deployment.yaml
+```
+
+![image-20260712133839400](./img/image-20260712133839400.png)
+
+Teste realizado:
+
+![image-20260712133906470](./img/image-20260712133906470.png)
+
+### Flag-Service
+
+[Flag-Service](k8s/flag-service/)
+
+#### Configmap.yaml
+
+```
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flag-config
+  namespace: toggle-prod
+data:
+  PORT: "8002"
+  AUTH_SERVICE_URL: http://auth-service:8001
+```
+
+#### Deployment.yaml
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flag-service
+  namespace: toggle-prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flag-service
+  template:
+    metadata:
+      labels:
+        app: flag-service
+    spec:
+      containers:
+        - name: flag-service
+          image: 708993007071.dkr.ecr.us-east-1.amazonaws.com/flag-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8002
+          envFrom:
+            - configMapRef:
+                name: flag-config
+            - secretRef:
+                name: flag-secret
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 30
+            periodSeconds: 10
+```
+
+#### secret.yaml
+
+```
+apiVersion: v1
+kind: Secret
+metadata:
+  name: flag-secret
+  namespace: toggle-prod
+type: Opaque
+data:
+  DATABASE_URL: 
+```
+
+#### service.yaml
+
+```
+apiVersion: v1
+kind: Secret
+metadata:
+  name: flag-secret
+  namespace: toggle-prod
+type: Opaque
+data:
+  DATABASE_URL: 
+```
+
+Deploy:
+
+```
+kubectl apply -f k8s/flag-service/flag-configmap.yaml
+kubectl apply -f k8s/flag-service/flag-secret.yaml
+kubectl apply -f k8s/flag-service/flag-service.yaml
+kubectl apply -f k8s/flag-service/flag-deployment.yaml
+```
+
+![image-20260712134655600](./img/image-20260712134655600.png)
+
+Teste:
+
+![image-20260712134712851](./img/image-20260712134712851.png)
+
+![image-20260712134737136](./img/image-20260712134737136.png)
+
+### **Targeting-Service**
+
+[Targeting-Service](k8s/targeting-service/)
+
+#### Configmap.yaml
+
+```
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: evaluation-config
+  namespace: toggle-prod
+data:
+  PORT: "8004"
+  REDIS_URL: "redis://evaluation-service-redis.yumvds.0001.use1.cache.amazonaws.com:6379"
+  FLAG_SERVICE_URL: "http://flag-service:8002"
+  TARGETING_SERVICE_URL: "http://targeting-service:8003"
+  AWS_REGION: "us-east-1"
+```
+
+#### Deployment.yaml
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: targeting-service
+  namespace: toggle-prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: targeting-service
+  template:
+    metadata:
+      labels:
+        app: targeting-service
+    spec:
+      containers:
+        - name: targeting-service
+          image: 708993007071.dkr.ecr.us-east-1.amazonaws.com/targeting-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8003
+          envFrom:
+            - configMapRef:
+                name: targeting-config
+            - secretRef:
+                name: targeting-secret
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8003
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8003
+            initialDelaySeconds: 30
+            periodSeconds: 10
+```
+
+#### secret.yaml
+
+```
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tar-secret
+  namespace: toggle-prod
+type: Opaque
+data:
+  DATABASE_URL: 
+```
+
+#### service.yaml
+
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: targeting-service
+  namespace: toggle-prod
+spec:
+  type: ClusterIP
+  selector:
+    app: targeting-service
+  ports:
+    - port: 8003
+      targetPort: 8003
+      protocol: TCP
+```
+
+Deploy:
+
+```
+kubectl apply -f k8s/targeting-service/configmap.yaml
+kubectl apply -f k8s/targeting-service/secret.yaml
+kubectl apply -f k8s/targeting-service/service.yaml
+kubectl apply -f k8s/targeting-service/deployment.yaml
+```
+
+Teste:
+
+![image-20260712134851098](./img/image-20260712134851098.png)
+
+### Evaluation-Service
+
+[Evaluation-Service](k8s/evaluation-service/)
+
+#### Configmap.yaml
+
+```
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: evaluation-config
+  namespace: toggle-prod
+data:
+  PORT: "8004"
+  REDIS_URL: "redis://evaluation-service-redis.yumvds.0001.use1.cache.amazonaws.com:6379"
+  FLAG_SERVICE_URL: "http://flag-service:8002"
+  TARGETING_SERVICE_URL: "http://targeting-service:8003"
+  AWS_REGION: "us-east-1"
+```
+
+#### Deployment.yaml
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: evaluation-service
+  namespace: toggle-prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: evaluation-service
+  template:
+    metadata:
+      labels:
+        app: evaluation-service
+    spec:
+      containers:
+        - name: evaluation-service
+          image: 708993007071.dkr.ecr.us-east-1.amazonaws.com/evaluation-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8004
+          envFrom:
+            - configMapRef:
+                name: evaluation-config
+            - secretRef:
+                name: evaluation-secret
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            initialDelaySeconds: 30
+            periodSeconds: 10
+```
+
+#### secret.yaml
+
+```
+apiVersion: v1
+kind: Secret
+metadata:
+  name: evaluation-secret
+  namespace: toggle-prod
+type: Opaque
+data:
+  SERVICE_API_KEY: 
+  AWS_ACCESS_KEY_ID: 
+  AWS_SECRET_ACCESS_KEY: 
+  AWS_SQS_URL: 
+```
+
+#### service.yaml
+
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: evaluation-service
+  namespace: toggle-prod
+spec:
+  type: ClusterIP
+  selector:
+    app: evaluation-service
+  ports:
+    - port: 8004
+      targetPort: 8004
+      protocol: TCP
+```
+
+#### hpa.yaml
+
+```
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: evaluation-service-hpa
+  namespace: toggle-prod
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: evaluation-service
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+```
+
+#### Deploy:
+
+```
+kubectl apply -f k8s/evaluation-service/configmap.yaml
+kubectl apply -f k8s/evaluation-service/secret.yaml
+kubectl apply -f k8s/evaluation-service/service.yaml
+kubectl apply -f k8s/evaluation-service/deployment.yaml
+kubectl apply -f k8s/evaluation-service/hpa.yaml
+```
+
+#### Teste:
+
+Rodando o teste:
+
+![image-20260712135014583](./img/image-20260712135014583.png)
+
+Analisando o log:
+
+![image-20260712135036920](./img/image-20260712135036920.png)
+
+Dados no sqs:
+
+![image-20260712135112436](./img/image-20260712135112436.png)
+
+![image-20260712135132864](./img/image-20260712135132864.png)
+
+### **Analytics-Service**
+
+[Analytics-Service](k8s/analytics-service/)
+
+#### Configmap.yaml
+
+```
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: analytics-config
+  namespace: toggle-prod
+data:
+  AWS_DYNAMODB_TABLE: "ToggleMasterAnalytics"
+  AWS_REGION: "us-east-1"
+  AWS_SQS_URL: "https://sqs.us-east-1.amazonaws.com/708993007071/evaluation-analytics-queue"
+```
+
+#### Deployment.yaml
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-service
+  namespace: toggle-prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: analytics-service
+  template:
+    metadata:
+      labels:
+        app: analytics-service
+    spec:
+      containers:
+        - name: analytics-service
+          image: 708993007071.dkr.ecr.us-east-1.amazonaws.com/analytics-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8005
+          envFrom:
+            - configMapRef:
+                name: analytics-config
+            - secretRef:
+                name: analytics-secret
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8005
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8005
+            initialDelaySeconds: 30
+            periodSeconds: 10
+```
+
+#### secret.yaml
+
+```
+apiVersion: v1
+kind: Secret
+metadata:
+  name: evaluation-secret
+  namespace: toggle-prod
+type: Opaque
+data:
+  AWS_ACCESS_KEY_ID: 
+  AWS_SECRET_ACCESS_KEY: 
+```
+
+#### service.yaml
+
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-service
+  namespace: toggle-prod
+spec:
+  type: ClusterIP
+  selector:
+    app: analytics-service
+  ports:
+    - port: 8005
+      targetPort: 8005
+      protocol: TCP
+```
+
+#### keda.yaml
+
+```
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: analytics-aws-auth
+  namespace: toggle-prod
+spec:
+  secretTargetRef:
+  - parameter: awsAccessKeyID
+    name: analytics-secret
+    key: AWS_ACCESS_KEY_ID
+  - parameter: awsSecretAccessKey
+    name: analytics-secret
+    key: AWS_SECRET_ACCESS_KEY
+```
+
+#### scaledobject.yaml
+
+```
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: analytics-sqs-scaler
+  namespace: toggle-prod
+spec:
+  scaleTargetRef:
+    name: analytics-service
+  minReplicaCount: 1
+  maxReplicaCount: 5
+  pollingInterval: 15
+  cooldownPeriod: 60
+  triggers:
+  - type: aws-sqs-queue
+    metadata:
+      queueURL: https://sqs.us-east-1.amazonaws.com/708993007071/evaluation-analytics-queue
+      queueLength: "5"
+      awsRegion: us-east-1
+    authenticationRef:
+      name: analytics-aws-auth
+```
+
+Deploy:
+
+```
+kubectl apply -f k8s/analytics-service/configmap.yaml
+kubectl apply -f k8s/analytics-service/secret.yaml
+kubectl apply -f k8s/analytics-service/service.yaml
+kubectl apply -f k8s/analytics-service/deployment.yaml
+kubectl apply -f k8s/analytics-service/keda-auth.yaml
+kubectl apply -f k8s/analytics-service/scaledobject.yaml
+```
+
+Teste:
+
+Logs do Processamento ao rodar o teste automatico.
+
+![image-20260712135409200](./img/image-20260712135409200.png)
+
+Dados da tabela:
+
+![image-20260712135436864](./img/image-20260712135436864.png)
 
 
+
+### 6 Testes da Aplicação no Cloud e Escalabilidade
+
+### Script de Teste
+
+Para os testes foi usado um script em Bash, tanto para os microserviços quanto para a carga.
+
+[test2.sh](test2.sh)
+
+```
+#!/bin/bash
+
+########################################
+# CONFIGURAÇÃO
+########################################
+
+BASE_URL_AUTH=${BASE_URL_AUTH:-http://acc28ae7dcc21487e87cdd1a2bbeb3d2-106617744.us-east-1.elb.amazonaws.com/auth}
+BASE_URL_FLAG=${BASE_URL_FLAG:-http://acc28ae7dcc21487e87cdd1a2bbeb3d2-106617744.us-east-1.elb.amazonaws.com/flags}
+BASE_URL_TARGETING=${BASE_URL_TARGETING:-http://acc28ae7dcc21487e87cdd1a2bbeb3d2-106617744.us-east-1.elb.amazonaws.com/targeting}
+BASE_URL_EVALUATION=${BASE_URL_EVALUATION:-http://acc28ae7dcc21487e87cdd1a2bbeb3d2-106617744.us-east-1.elb.amazonaws.com/evaluation}
+BASE_URL_ANALYTICS=${BASE_URL_ANALYTICS:-http://acc28ae7dcc21487e87cdd1a2bbeb3d2-106617744.us-east-1.elb.amazonaws.com/analytics}
+
+MASTER_KEY=${MASTER_KEY:-admin-secreto-123}
+
+FLAG_NAME="enable-new-dashboard-$(date +%s)"
+
+USER_NAME1="user-$(date +%s)"
+sleep 2
+USER_NAME2="user-$(date +%s)"
+
+echo ""
+echo "========================================"
+echo "AMBIENTE DE TESTE"
+echo "========================================"
+echo "AUTH      : $BASE_URL_AUTH"
+echo "FLAG      : $BASE_URL_FLAG"
+echo "TARGETING : $BASE_URL_TARGETING"
+echo "EVALUATION : $BASE_URL_EVALUATION"
+echo "ANALYTICS : $BASE_URL_ANALYTICS"
+
+echo ""
+
+########################################
+# HEALTH CHECK
+########################################
+
+echo "========================================"
+echo "1. Health Check"
+echo "========================================"
+
+curl "$BASE_URL_AUTH/health"
+echo
+echo
+
+
+curl "$BASE_URL_FLAG/health"
+echo
+echo
+
+
+curl "$BASE_URL_TARGETING/health"
+echo
+echo
+
+curl "$BASE_URL_EVALUATION/health"
+echo
+echo
+
+curl "$BASE_URL_ANALYTICS/health"
+echo
+echo
+
+########################################
+# CRIAR API KEY
+########################################
+
+echo ""
+echo "========================================"
+echo "2. Criando API Key"
+echo "========================================"
+
+HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" \
+-X POST "$BASE_URL_AUTH/admin/keys" \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer admin-secreto-123" \
+-d '{"name":"teste-automacao"}')
+
+if [ "$HTTP_CODE" != "201" ]; then
+    echo "ERRO ao criar API Key (HTTP $HTTP_CODE)"
+    cat response.json
+    exit 1
+fi
+
+API_KEY=$(grep -o '"key":"[^"]*' response.json | cut -d'"' -f4)
+
+echo "API KEY:"
+echo "$API_KEY"
+echo ""
+echo ""
+
+
+########################################
+# CRIAR FLAG
+########################################
+
+echo "========================================"
+echo "3. Criando Flag"
+echo "========================================"
+
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+-X POST "$BASE_URL_FLAG/flags" \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer $API_KEY" \
+-d "{
+    \"name\":\"$FLAG_NAME\",
+    \"description\":\"Teste automatizado\",
+    \"is_enabled\":true
+}")
+
+if [ "$HTTP_CODE" != "201" ]; then
+    echo "ERRO ao criar Flag (HTTP $HTTP_CODE)"
+    cat response.json
+    exit 1
+fi
+cat response.json
+
+echo ""
+echo ""
+
+
+echo "========================================"
+echo "4. Listando Flags"
+echo "========================================"
+
+HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" \
+-H "Authorization: Bearer $API_KEY" \
+"$BASE_URL_FLAG/flags")
+
+if [ "$HTTP_CODE" != "200" ]; then
+    echo "ERRO ao listar flags (HTTP $HTTP_CODE)"
+    cat response.json
+    exit 1
+fi
+
+echo "Flags encontradas:"
+grep -o '"name":"[^"]*"' response.json | cut -d'"' -f4
+
+echo ""
+echo ""
+
+echo "========================================"
+echo "5. Consultando Flag"
+echo "========================================"
+
+HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" \
+"$BASE_URL_FLAG/flags/$FLAG_NAME" \
+-H "Authorization: Bearer $API_KEY")
+
+if [ "$HTTP_CODE" != "200" ]; then
+    echo "ERRO ao consultar flag (HTTP $HTTP_CODE)"
+    cat response.json
+    exit 1
+fi
+cat response.json
+
+echo ""
+echo ""
+
+echo "========================================"
+echo "6. Atualizando Flag"
+echo "========================================"
+
+HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" \
+-X PUT "$BASE_URL_FLAG/flags/$FLAG_NAME" \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer $API_KEY" \
+-d '{
+  "is_enabled": false
+}')
+
+if [ "$HTTP_CODE" != "200" ]; then
+    echo "ERRO ao atualizar flag (HTTP $HTTP_CODE)"
+    cat response.json
+    exit 1
+fi
+
+cat response.json
+
+echo ""
+echo "========================================"
+echo "7. Criando Regra de Targeting"
+echo "========================================"
+
+HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" \
+-X POST "$BASE_URL_TARGETING/rules" \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer $API_KEY" \
+-d "{
+  \"flag_name\":\"$FLAG_NAME\",
+  \"is_enabled\":true,
+  \"rules\":{
+      \"type\":\"PERCENTAGE\",
+      \"value\":50
+  }
+}")
+
+if [ "$HTTP_CODE" != "201" ]; then
+    echo "ERRO ao criar regra (HTTP $HTTP_CODE)"
+    cat response.json
+    exit 1
+fi
+
+cat response.json
+
+echo ""
+echo ""
+
+echo "========================================"
+echo "8. Consultando Regra"
+echo "========================================"
+
+HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" \
+"$BASE_URL_TARGETING/rules/$FLAG_NAME" \
+-H "Authorization: Bearer $API_KEY")
+
+if [ "$HTTP_CODE" != "200" ]; then
+    echo "ERRO ao consultar regra (HTTP $HTTP_CODE)"
+    cat response.json
+    exit 1
+fi
+cat response.json
+
+echo ""
+echo ""
+
+echo "========================================"
+echo "9. Atualizando Regra"
+echo "========================================"
+
+HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" \
+-X PUT "$BASE_URL_TARGETING/rules/$FLAG_NAME" \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer $API_KEY" \
+-d '{
+  "rules":{
+      "type":"PERCENTAGE",
+      "value":75
+  }
+}')
+
+if [ "$HTTP_CODE" != "200" ]; then
+    echo "ERRO ao atualizar regra (HTTP $HTTP_CODE)"
+    exit 1
+fi
+
+cat response.json
+
+echo ""
+echo ""
+
+echo "========================================"
+echo "10. Testando a fila SQS e o processamento"
+echo "========================================"
+
+echo "user 1 - $USER_NAME1"
+
+for i in 1 2
+do
+  echo "=== Request $i ==="
+
+  HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" \
+    "$BASE_URL_EVALUATION/evaluate?user_id=$USER_NAME1&flag_name=$FLAG_NAME" \
+    )
+
+  if [ "$HTTP_CODE" != "200" ]; then
+      echo "ERRO na tentativa $i (HTTP $HTTP_CODE)"
+      cat response.json
+      exit 1
+  fi
+  cat response.json
+
+  echo -e "\n"
+done
+
+echo ""
+echo ""
+
+echo "user 2 - $USER_NAME2"
+
+for i in 1 2
+do
+  echo "=== Request $i ==="
+
+  HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" \
+    "$BASE_URL_EVALUATION/evaluate?user_id=$USER_NAME2&flag_name=enable-new-dashboard-1780855960" \
+    )
+
+
+  if [ "$HTTP_CODE" != "200" ]; then
+      echo "ERRO na tentativa $i (HTTP $HTTP_CODE)"
+      cat response.json
+      exit 1
+  fi
+  cat response.json
+
+  echo -e "\n"
+done
+
+echo ""
+echo ""
+
+echo "========================================"
+echo "11. Teste de Carga"
+echo "========================================"
+
+for i in $(seq 1 1000)
+do
+  (
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+      "$BASE_URL_EVALUATION/evaluate?user_id=user-$i&flag_name=enable-new-dashboard-1783784225"
+    )
+
+    if [ "$HTTP_CODE" != "200" ]; then
+        echo "ERRO na tentativa $i (HTTP $HTTP_CODE)"
+    else
+        echo "Request $i OK"
+    fi
+  ) &
+
+  # limita concorrência
+  if (( i % 50 == 0 )); then
+      wait
+  fi
+done
+
+wait
+
+echo ""
+echo "Teste de carga finalizado"
+
+echo "========================================"
+echo "12. Deletando Flag"
+echo "========================================"
+
+echo "FLAG_NAME=$FLAG_NAME"
+
+HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" \
+-X DELETE \
+"$BASE_URL_FLAG/flags/$FLAG_NAME" \
+-H "Authorization: Bearer $API_KEY")
+
+if [ "$HTTP_CODE" != "204" ]; then
+    echo "ERRO ao deletar flag (HTTP $HTTP_CODE)"
+    exit 1
+fi
+
+echo "Flag removida com sucesso."
+
+echo ""
+echo ""
+echo "TESTE FINALIZADO COM SUCESSO"
+```
+
+### Testes de Escalabilidade:
+
+### Preparação
+
+Desativamos o pod do Analytics para que acumule fila no sqs e escale ao iniciar.
+
+```
+kubectl scale deployment analytics-service \
+-n toggle-prod \
+--replicas=0
+```
+
+Estado inicial:
+
+![image-20260712135959720](./img/image-20260712135959720.png)
+
+Rodamos o test2.sh
+
+Resultados e Monitoramento
+
+watch kubectl get pods -n toggle-prod -o wide
+
+![image-20260712140027189](./img/image-20260712140027189.png)
+
+watch kubectl get nodes
+
+![image-20260712140045515](./img/image-20260712140045515.png)
+
+watch kubectl get hpa -n toggle-prod
+
+![image-20260712140112711](./img/image-20260712140112711.png)
+
+## 7 Arquitetura e Desafios Encontrados
+
+### 7.1 Criação das Imagens
+
+Para os dockerfiles foi necessário criar com 2 estágios de forma a diminuir o tamanho para os serviços em Python e fazer a compilação para os desenvolvidos em Golang.
+
+| Serviço            | Stage Único | Multistage |
+| :----------------- | :---------- | :--------- |
+| auth-service       | 30 MB       | 30 MB      |
+| evaluation-service | 36 MB       | 36 MB      |
+| flag-service       | 541 MB      | **210 MB** |
+| targeting-service  | 529 MB      | **210 MB** |
+| analytics-service  | 747 MB      | **248 MB** |
+
+Com redução do tamanho das imagens Python de 60%.
+
+### 7.2 Escalabilidade do Cluster
+
+Identificamos uma limitação no node t3.micro usado no free tier de apenas 4 pods/node. O limite de pods por nó imposto pelo VPC CNI utilizado no EKS.
+
+Dessa forma, foi necessário deixar as aplicações com apenas 1 replica e apenas o Analytics e o Evaluation com a escalabilidade para até 5 pods.
+
+E aumentar a quantidade e escalabilidade do Auto Scaling Group para: 
+
+- Minimo: 6
+- Desejável: 8
+- Máximo:12
+
+Foi necessária a implantação manual do Cluster Autoscaler utilizando IAM Roles for Service Accounts (IRSA).
+
+Durante os testes foram encontrados alguns problemas:
+
+- o autoscaler não conseguia ser agendado por solicitar memória excessiva;
+- foi necessário reduzir os recursos do próprio Deployment do Cluster Autoscaler;
+
+Após o ajuste o Cluster Autoscaler passou a criar automaticamente novos nós quando os pods não conseguiam ser agendados.
+
+### 7.3 Ajuste dos Requests e Limits
+
+Inicialmente os microserviços utilizavam requests e limits relativamente altos, fazendo com que os nós aparentassem estar sem memória disponível.
+
+Após análise foi possível reduzir significativamente os recursos reservados:
+
+```
+requests:
+  cpu: 50m
+  memory: 64Mi
+
+limits:
+  cpu: 250m
+  memory: 256Mi
+```
+
+Essa alteração permitiu melhor utilização dos nós e maior densidade de pods.
+
+### 7.4 Redes, SG e Subnets
+
+Os Bancos RDS e Redis precisaram estar dentro da mesma VPC, com conexão via Security group para acesso interno.
+
+### 7.5 Configuração dos Bancos e Tabelas
+
+Por ser free tier, houve uma limitação de apenas 2 RDS Postgres.
+
+Foram criados apenas 2 RDS, devido à limitação de quota da conta AWS (máximo de instâncias RDS permitidas), e o banco do **targeting-service** foi criado como um banco separado dentro da instância **flag-db**.
+
+RDS: auth-db
+
+- banco auth-db;
+
+RDS: flag-db
+
+- banco flag-db
+- banco targeting-db 
+
+Para a criação dos bancos e tabelas, subimos um pod temporário postgres-client dentro do cluster e usamos para acessar os bancos postgres dentro do cluster:
+
+```
+ kubectl run postgres-client \
+  --image=postgres:18 \
+  -n toggle-prod \
+  --rm -it \
+  -- bash
+
+E dentro do terminal do pod, acessar os bancos via psql:
+
+psql \
+-h auth-db.cs5ayiqio5aa.us-east-1.rds.amazonaws.com \
+-U postgres \
+-d postgres \
+-p 5432
+```
+
+### 7.6 Ingress
+
+Foi utilizado o NGINX Ingress Controller para centralizar o acesso às APIs.
+
+O controlador foi exposto utilizando um LoadBalancer da AWS.
+
+Toda a comunicação externa ocorre através de um único endpoint, que distribui as requisições para os respectivos serviços internos conforme as rotas configuradas.
+
+Foi definido apenas um namespace para os 5 microserviçoes de forma a simplificar a configração do ingress, e ter apenas um ingress.yaml e uma url para as API's
+
+### 7.7 Arquitetura
+
+
+
+## 8 Diferença de Bancos
+
+ 
+
+
+
+## 9 Vídeo de Apresentação

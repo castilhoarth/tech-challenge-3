@@ -38,24 +38,27 @@ echo "========================================"
 echo "1. Health Check"
 echo "========================================"
 
+echo "AUTH" 
 curl "$BASE_URL_AUTH/health"
 echo
 echo
 
-
+echo "FLAGS" 
 curl "$BASE_URL_FLAG/health"
 echo
 echo
 
-
+echo "TARGETING" 
 curl "$BASE_URL_TARGETING/health"
 echo
 echo
 
+echo "EVALUATION"
 curl "$BASE_URL_EVALUATION/health"
 echo
 echo
 
+echo "ANALITYCS"
 curl "$BASE_URL_ANALYTICS/health"
 echo
 echo
@@ -299,6 +302,7 @@ done
 echo ""
 echo ""
 
+
 echo "========================================"
 echo "11. Teste de Carga"
 echo "========================================"
@@ -321,12 +325,14 @@ do
   if (( i % 50 == 0 )); then
       wait
   fi
+
 done
 
 wait
 
 echo ""
 echo "Teste de carga finalizado"
+
 
 echo "========================================"
 echo "12. Deletando Flag"
