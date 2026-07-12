@@ -58,7 +58,7 @@ curl "$BASE_URL_EVALUATION/health"
 echo
 echo
 
-echo "ANALITYCS"
+echo "EVALUATION"
 curl "$BASE_URL_ANALYTICS/health"
 echo
 echo
@@ -302,6 +302,7 @@ done
 echo ""
 echo ""
 
+
 echo "========================================"
 echo "11. Teste de Carga"
 echo "========================================"
@@ -331,6 +332,7 @@ wait
 
 echo ""
 echo "Teste de carga finalizado"
+
 
 echo "========================================"
 echo "12. Deletando Flag"

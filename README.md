@@ -2681,8 +2681,6 @@ psql \
 
 Foi utilizado o NGINX Ingress Controller para centralizar o acesso às APIs.
 
-O controlador foi exposto utilizando um LoadBalancer da AWS.
-
 Toda a comunicação externa ocorre através de um único endpoint, que distribui as requisições para os respectivos serviços internos conforme as rotas configuradas.
 
 Foi definido apenas um namespace para os 5 microserviçoes de forma a simplificar a configração do ingress, e ter apenas um ingress.yaml e uma url para as API's
