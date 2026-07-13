@@ -1,0 +1,33 @@
+# ==============================================================================
+# CONFIGURAÇÕES GERAIS E BANCO DE DADOS
+# ==============================================================================
+DB_USER=teste
+DB_PASSWORD=teste
+
+
+# Nomes dos bancos de dados
+AUTH_DB_NAME=teste
+FLAGS_DB_NAME=teste
+TARGETING_DB_NAME=teste
+
+# Chaves de Autenticação do Sistema
+MASTER_KEY=teste
+SERVICE_API_KEY=teste
+
+# ==============================================================================
+# PORTAS DOS SERVIÇOS
+# ==============================================================================
+AUTH_PORT=teste
+FLAG_PORT=teste
+TARGETING_PORT=teste
+EVALUATION_PORT=teste
+ANALYTICS_PORT=teste
+
+# ==============================================================================
+# CREDENCIAIS E CONFIGURAÇÕES AWS (Local ou Cloud)
+# ==============================================================================
+aws_access_key_id=teste
+aws_secret_access_key=teste
+aws_session_token=teste
+aws_region=teste
+AWS_SQS_URL=teste
