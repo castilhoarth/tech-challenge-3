@@ -2748,3 +2748,4 @@ SQS + DynamoDB usados no serviço que precisa lidar com grande volume de eventos
 
 
 ## 9 Vídeo de Apresentação
+https://youtu.be/oh_k-U3Ucrc?si=cC_PCK49gd3XZ-vo
