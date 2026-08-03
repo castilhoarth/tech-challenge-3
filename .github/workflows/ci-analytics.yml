@@ -1,0 +1,29 @@
+name: CI — Analytics Service
+
+on:
+  push:
+    paths:
+      - 'services/analytics-service-main/**'
+      - 'k8s/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/**'
+  pull_request:
+    paths:
+      - 'services/analytics-service-main/**'
+      - 'k8s/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/**'
+
+jobs:
+  call:
+    uses: ./.github/workflows/reusable-ci.yml
+    with:
+      service: 'analytics'
+      context: 'services/analytics-service-main'
+      dockerfile: 'Dockerfile'
+      image_name: 'analytics-service'
+      language: 'python'
+      push: ${{ github.ref == 'refs/heads/main' }}
+      ecr_registry: ${{ secrets.ECR_REGISTRY }}
+      ecr_repo_prefix: ${{ secrets.ECR_REPOSITORY_PREFIX }}
+      tests_command: ''

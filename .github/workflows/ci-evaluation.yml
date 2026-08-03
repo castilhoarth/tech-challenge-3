@@ -1,0 +1,29 @@
+name: CI — Evaluation Service
+
+on:
+  push:
+    paths:
+      - 'services/evaluation-service-main/**'
+      - 'k8s/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/**'
+  pull_request:
+    paths:
+      - 'services/evaluation-service-main/**'
+      - 'k8s/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/**'
+
+jobs:
+  call:
+    uses: ./.github/workflows/reusable-ci.yml
+    with:
+      service: 'evaluation'
+      context: 'services/evaluation-service-main'
+      dockerfile: 'Dockerfile'
+      image_name: 'evaluation-service'
+      language: 'go'
+      push: ${{ github.ref == 'refs/heads/main' }}
+      ecr_registry: ${{ secrets.ECR_REGISTRY }}
+      ecr_repo_prefix: ${{ secrets.ECR_REPOSITORY_PREFIX }}
+      tests_command: ''

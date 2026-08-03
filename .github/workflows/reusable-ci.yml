@@ -1,0 +1,190 @@
+name: Reusable CI
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        required: true
+        type: string
+      context:
+        required: false
+        type: string
+        default: ''
+      dockerfile:
+        required: false
+        type: string
+        default: 'Dockerfile'
+      image_name:
+        required: false
+        type: string
+        default: ''
+      language:
+        required: false
+        type: string
+        default: 'go'
+      push:
+        required: false
+        type: boolean
+        default: false
+      ecr_registry:
+        required: false
+        type: string
+        default: ''
+      ecr_repo_prefix:
+        required: false
+        type: string
+        default: ''
+      tests_command:
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.set-image.outputs.image }}
+      context: ${{ steps.ctx.outputs.context }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine context
+        id: ctx
+        run: |
+          if [ -z "${{ inputs.context }}" ]; then
+            echo "context=services/${{ inputs.service }}-main" >> $GITHUB_OUTPUT
+          else
+            echo "context=${{ inputs.context }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set image name and tag
+        id: set-image
+        run: |
+          SHORT=${GITHUB_SHA::7}
+          TAG=sha-${SHORT}
+          IMAGE_NAME="${{ inputs.image_name }}"
+          if [ -z "$IMAGE_NAME" ]; then
+            IMAGE_NAME="${{ inputs.service }}-service"
+          fi
+          echo "image=${IMAGE_NAME}:${TAG}" >> $GITHUB_OUTPUT
+
+  deps_build_and_scan:
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup environment
+        run: echo "Setting up for language=${{ inputs.language }}"
+
+      - name: Setup Go
+        if: ${{ inputs.language == 'go' }}
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+
+      - name: Cache Go modules
+        if: ${{ inputs.language == 'go' }}
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ${{ github.workspace }}/.cache/gomod
+          key: go-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+
+      - name: Setup Python
+        if: ${{ inputs.language == 'python' }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip
+        if: ${{ inputs.language == 'python' }}
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('**/requirements.txt') }}
+
+      - name: Install dev tools (Go)
+        if: ${{ inputs.language == 'go' }}
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          go vet ./... || true
+
+      - name: Install dev tools (Python)
+        if: ${{ inputs.language == 'python' }}
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install bandit pip-audit
+
+      - name: Run dependency security scan (Go)
+        if: ${{ inputs.language == 'go' }}
+        run: |
+          gosec ./...
+
+      - name: Run dependency security scan (Python)
+        if: ${{ inputs.language == 'python' }}
+        run: |
+          pip-audit --fail-on high || true
+
+      - name: Run tests (if provided)
+        if: ${{ inputs.tests_command != '' }}
+        run: ${{ inputs.tests_command }}
+
+  docker_build:
+    needs: deps_build_and_scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        env:
+          CTX: ${{ needs.prepare.outputs.context }}
+          IMG: ${{ needs.prepare.outputs.image }}
+        run: |
+          docker build -f "$CTX/${{ inputs.dockerfile }}" -t "$IMG" "$CTX"
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            docker tag "$IMG" "${IMG%:*}:latest" || true
+          fi
+
+      - name: Container scan (Trivy)
+        uses: aquasecurity/trivy-action@v1
+        with:
+          image-ref: ${{ needs.prepare.outputs.image }}
+          scan-type: image
+          severity: CRITICAL,HIGH
+
+  push_ecr:
+    needs: docker_build
+    if: ${{ inputs.push }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Push to ECR
+        env:
+          IMAGE: ${{ needs.prepare.outputs.image }}
+          ECR_REG: ${{ inputs.ecr_registry }}
+          ECR_PREFIX: ${{ inputs.ecr_repo_prefix }}
+        run: |
+          SHORT=${GITHUB_SHA::7}
+          TAG=sha-${SHORT}
+          REPO_NAME="${ECR_PREFIX}/${{ inputs.image_name }}"
+          FULL="${ECR_REG}/${REPO_NAME}"
+          docker tag "$IMAGE" "${FULL}:${TAG}"
+          docker push "${FULL}:${TAG}"
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            docker tag "$IMAGE" "${FULL}:latest" || true
+            docker push "${FULL}:latest"
+          fi
