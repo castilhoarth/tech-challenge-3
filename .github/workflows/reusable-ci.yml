@@ -86,9 +86,9 @@ jobs:
 
       - name: Setup Go
         if: ${{ inputs.language == 'go' }}
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: '1.20'
+          go-version: '1.24'
 
       - name: Cache Go modules
         if: ${{ inputs.language == 'go' }}
