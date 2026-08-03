@@ -1,6 +1,7 @@
 name: CI — Targeting Service
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - 'services/targeting-service-main/**'

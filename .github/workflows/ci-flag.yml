@@ -1,6 +1,7 @@
 name: CI — Flag Service
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - 'services/flag-service-main/**'

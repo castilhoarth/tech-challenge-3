@@ -1,6 +1,7 @@
 name: CI — Auth Service
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - 'services/auth-service-main/**'

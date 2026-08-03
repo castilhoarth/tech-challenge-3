@@ -1,6 +1,7 @@
 name: CI — Evaluation Service
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - 'services/evaluation-service-main/**'
