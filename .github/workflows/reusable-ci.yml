@@ -2,6 +2,11 @@ name: Reusable CI
 
 on:
   workflow_call:
+    secrets:
+      ecr_registry:
+        required: false
+      ecr_repo_prefix:
+        required: false
     inputs:
       service:
         required: true
@@ -175,8 +180,8 @@ jobs:
       - name: Push to ECR
         env:
           IMAGE: ${{ needs.prepare.outputs.image }}
-          ECR_REG: ${{ inputs.ecr_registry }}
-          ECR_PREFIX: ${{ inputs.ecr_repo_prefix }}
+          ECR_REG: ${{ secrets.ecr_registry }}
+          ECR_PREFIX: ${{ secrets.ecr_repo_prefix }}
         run: |
           SHORT=${GITHUB_SHA::7}
           TAG=sha-${SHORT}

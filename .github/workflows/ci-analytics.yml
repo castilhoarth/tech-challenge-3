@@ -25,6 +25,7 @@ jobs:
       image_name: 'analytics-service'
       language: 'python'
       push: ${{ github.ref == 'refs/heads/main' }}
+      tests_command: ''
+    secrets:
       ecr_registry: ${{ secrets.ECR_REGISTRY }}
       ecr_repo_prefix: ${{ secrets.ECR_REPOSITORY_PREFIX }}
-      tests_command: ''
