@@ -7,6 +7,12 @@ on:
         required: false
       ecr_repo_prefix:
         required: false
+      AWS_ACCESS_KEY_ID:
+        required: false
+      AWS_SECRET_ACCESS_KEY:
+        required: false
+      AWS_REGION:
+        required: false
     inputs:
       service:
         required: true
