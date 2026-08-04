@@ -179,6 +179,16 @@ jobs:
     if: ${{ inputs.push }}
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Build Docker image for push
+        env:
+          CTX: ${{ needs.prepare.outputs.context }}
+          IMG: ${{ needs.prepare.outputs.image }}
+        run: |
+          docker build -f "$CTX/${{ inputs.dockerfile }}" -t "$IMG" "$CTX"
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
