@@ -139,7 +139,9 @@ jobs:
         run: ${{ inputs.tests_command }}
 
   docker_build:
-    needs: deps_build_and_scan
+    needs:
+      - prepare
+      - deps_build_and_scan
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -163,7 +165,9 @@ jobs:
           severity: CRITICAL,HIGH
 
   push_ecr:
-    needs: docker_build
+    needs:
+      - prepare
+      - docker_build
     if: ${{ inputs.push }}
     runs-on: ubuntu-latest
     steps:
