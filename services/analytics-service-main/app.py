@@ -17,51 +17,58 @@ log = logging.getLogger(__name__)
 # Carrega .env para desenvolvimento local
 load_dotenv()
 
-# --- Configuração ---
-AWS_REGION = os.getenv("AWS_REGION")
-SQS_QUEUE_URL = os.getenv("AWS_SQS_URL")
-DYNAMODB_TABLE_NAME = os.getenv("AWS_DYNAMODB_TABLE")
-DYNAMODB_ENDPOINT = os.getenv("AWS_DYNAMODB_ENDPOINT") #alteração para uso local <----
+# Detecta ambiente de teste (GitHub Actions ou pytest)
+IS_TEST = os.getenv("ENVIRONMENT") == "test" or "PYTEST_CURRENT_TEST" in os.environ
 
-if not all([AWS_REGION, SQS_QUEUE_URL, DYNAMODB_TABLE_NAME]):
-    log.critical("Erro: AWS_REGION, AWS_SQS_URL, e AWS_DYNAMODB_TABLE devem ser definidos.")
-    sys.exit(1)
+# --- Configuração ---
+if IS_TEST:
+    AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+    SQS_QUEUE_URL = os.getenv("AWS_SQS_URL", "http://localhost:4566/000000000000/test-queue")
+    DYNAMODB_TABLE_NAME = os.getenv("AWS_DYNAMODB_TABLE", "test-table")
+    DYNAMODB_ENDPOINT = os.getenv("AWS_DYNAMODB_ENDPOINT")
+    log.info("Modo teste: usando valores padrão para AWS_REGION, SQS_QUEUE_URL e DYNAMODB_TABLE_NAME.")
+else:
+    AWS_REGION = os.getenv("AWS_REGION")
+    SQS_QUEUE_URL = os.getenv("AWS_SQS_URL")
+    DYNAMODB_TABLE_NAME = os.getenv("AWS_DYNAMODB_TABLE")
+    DYNAMODB_ENDPOINT = os.getenv("AWS_DYNAMODB_ENDPOINT") #alteração para uso local <----
+
+    if not all([AWS_REGION, SQS_QUEUE_URL, DYNAMODB_TABLE_NAME]):
+        log.critical("Erro: AWS_REGION, AWS_SQS_URL, e AWS_DYNAMODB_TABLE devem ser definidos.")
+        sys.exit(1)
 
 # --- Clientes Boto3 ---
-# Criamos a sessão uma vez
-try:
-    session = boto3.Session(region_name=AWS_REGION)
-    sqs_client = session.client("sqs")
-    
-    #alteração para uso local tb ------>
-    
-    #dynamodb_client = session.client("dynamodb")
+# Inicializa clientes apenas quando não estivermos em modo de teste. Em testes, os clients
+# permanecem como None e o worker não será iniciado.
+sqs_client = None
+dynamodb_client = None
+if not IS_TEST:
+    try:
+        session = boto3.Session(region_name=AWS_REGION)
+        sqs_client = session.client("sqs")
 
-    if DYNAMODB_ENDPOINT:
-        log.info(f"Usando DynamoDB Local: {DYNAMODB_ENDPOINT}")
+        if DYNAMODB_ENDPOINT:
+            log.info(f"Usando DynamoDB Local: {DYNAMODB_ENDPOINT}")
+            dynamodb_client = session.client(
+                "dynamodb",
+                endpoint_url=DYNAMODB_ENDPOINT,
+                aws_access_key_id="dummy",
+                aws_secret_access_key="dummy",
+            )
+        else:
+            log.info("Usando DynamoDB AWS")
+            dynamodb_client = session.client("dynamodb")
 
-        dynamodb_client = session.client(
-            "dynamodb",
-            endpoint_url=DYNAMODB_ENDPOINT,
-            aws_access_key_id="dummy",
-            aws_secret_access_key="dummy",
-        )
-    else:
-        log.info("Usando DynamoDB AWS")
+        log.info(f"Clientes Boto3 inicializados na região {AWS_REGION}")
 
-        dynamodb_client = session.client("dynamodb")
-    
-    # fim da alteração --------
-
-    log.info(f"Clientes Boto3 inicializados na região {AWS_REGION}")
-
-
-except NoCredentialsError:
-    log.critical("Credenciais da AWS não encontradas. Verifique seu ambiente.")
-    sys.exit(1)
-except Exception as e:
-    log.critical(f"Erro ao inicializar o Boto3: {e}")
-    sys.exit(1)
+    except NoCredentialsError:
+        log.critical("Credenciais da AWS não encontradas. Verifique seu ambiente.")
+        sys.exit(1)
+    except Exception as e:
+        log.critical(f"Erro ao inicializar o Boto3: {e}")
+        sys.exit(1)
+else:
+    log.info("Modo teste: clientes Boto3 não inicializados (sqs_client/dynamodb_client = None).")
 
 
 # --- SQS Worker ---
@@ -155,7 +162,10 @@ def start_worker():
 
 # Inicia o worker SQS em uma thread de background
 # Isso garante que ele inicie tanto com 'flask run' quanto com 'gunicorn'
-start_worker()
+if not IS_TEST:
+    start_worker()
+else:
+    log.info("Modo teste: worker SQS não iniciado.")
 
 if __name__ == '__main__':
     port = int(os.getenv("PORT", 8005))

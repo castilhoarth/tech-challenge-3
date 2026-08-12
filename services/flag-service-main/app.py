@@ -19,23 +19,34 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# --- Configuração ---
-DATABASE_URL = os.getenv("DATABASE_URL")
-AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL")
+# Detecta ambiente de teste (GitHub Actions ou pytest)
+IS_TEST = os.getenv("ENVIRONMENT") == "test" or "PYTEST_CURRENT_TEST" in os.environ
 
-if not DATABASE_URL or not AUTH_SERVICE_URL:
-    log.critical("Erro: DATABASE_URL e AUTH_SERVICE_URL devem ser definidos.")
-    sys.exit(1)
+# --- Configuração ---
+if IS_TEST:
+    DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://test:test@localhost:5432/test")
+    AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8000")
+    log.info("Modo teste: usando valores padrão para DATABASE_URL e AUTH_SERVICE_URL.")
+else:
+    DATABASE_URL = os.getenv("DATABASE_URL")
+    AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL")
+
+    if not DATABASE_URL or not AUTH_SERVICE_URL:
+        log.critical("Erro: DATABASE_URL e AUTH_SERVICE_URL devem ser definidos.")
+        sys.exit(1)
 
 # --- Pool de Conexão com o Banco ---
-# Inicializa o pool de conexões (Mín: 1, Máx: 5 conexões)
-
-try:
-    pool = SimpleConnectionPool(1, 5, dsn=DATABASE_URL)
-    log.info("Pool de conexões com o PostgreSQL inicializado.")
-except psycopg2.OperationalError as e:
-    log.critical(f"Erro fatal ao conectar ao PostgreSQL: {e}")
-    sys.exit(1)
+# Inicializa o pool apenas quando não estivermos em modo de teste
+pool = None
+if not IS_TEST:
+    try:
+        pool = SimpleConnectionPool(1, 5, dsn=DATABASE_URL)
+        log.info("Pool de conexões com o PostgreSQL inicializado.")
+    except psycopg2.OperationalError as e:
+        log.critical(f"Erro fatal ao conectar ao PostgreSQL: {e}")
+        sys.exit(1)
+else:
+    log.info("Modo teste: conexão com banco não inicializada (pool=None).")
 
 
 # --- Middleware de Autenticação ---

@@ -150,6 +150,8 @@ jobs:
       - name: Run tests (Python)
         if: ${{ inputs.language == 'python' && inputs.tests_command != '' }}
         working-directory: ${{ needs.prepare.outputs.context }}
+        env:
+          ENVIRONMENT: test
         run: |
           pip install -r requirements.txt
           ${{ inputs.tests_command }}
