@@ -25,7 +25,7 @@ jobs:
       image_name: 'targeting-service'
       language: 'python'
       push: ${{ github.ref == 'refs/heads/main' }}
-      tests_command: ''
+      tests_command: 'python -m pytest test_app.py -v --tb=short'
     secrets:
       ecr_registry: ${{ secrets.ECR_REGISTRY }}
       ecr_repo_prefix: ${{ secrets.ECR_REPOSITORY_PREFIX }}
