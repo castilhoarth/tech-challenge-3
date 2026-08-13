@@ -2,6 +2,7 @@ import os
 import sys
 import psycopg2
 import requests
+from requests.exceptions import RequestException, Timeout
 import json
 from psycopg2.extras import RealDictCursor, Json
 from psycopg2.pool import SimpleConnectionPool
@@ -64,10 +65,10 @@ def require_auth(f):
                 log.warning(f"Falha na validação da chave (status: {response.status_code})")
                 return jsonify({"error": "Chave de API inválida"}), 401
         
-        except requests.exceptions.Timeout:
+        except Timeout:
             log.error("Timeout ao conectar com o auth-service")
             return jsonify({"error": "Serviço de autenticação indisponível (timeout)"}), 504 # Gateway Timeout
-        except requests.exceptions.RequestException as e:
+        except RequestException as e:
             log.error(f"Erro ao conectar com o auth-service: {e}")
             return jsonify({"error": "Serviço de autenticação indisponível"}), 503 # Service Unavailable
 
