@@ -12,10 +12,16 @@ type EvaluationResponse struct {
 	Result   bool   `json:"result"`
 }
 
-func (a *App) healthHandler(w http.ResponseWriter, r *http.Request) {
+func writeJSON(w http.ResponseWriter, status int, value any) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	w.WriteHeader(status)
+	if err := json.NewEncoder(w).Encode(value); err != nil {
+		log.Printf("Erro ao codificar resposta JSON: %v", err)
+	}
+}
+
+func (a *App) healthHandler(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func (a *App) evaluationHandler(w http.ResponseWriter, r *http.Request) {
@@ -38,7 +44,7 @@ func (a *App) evaluationHandler(w http.ResponseWriter, r *http.Request) {
 			result = false
 		} else {
 			// Outros erros (serviços offline, etc)
-			log.Printf("Erro ao avaliar flag '%s': %v", flagName, err)
+			log.Println("Erro ao avaliar flag")
 			http.Error(w, `{"error": "Erro interno ao avaliar a flag"}`, http.StatusBadGateway)
 			return
 		}
@@ -49,8 +55,7 @@ func (a *App) evaluationHandler(w http.ResponseWriter, r *http.Request) {
 	go a.sendEvaluationEvent(userID, flagName, result)
 
 	// 4. Retornar a resposta
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(EvaluationResponse{
+	writeJSON(w, http.StatusOK, EvaluationResponse{
 		FlagName: flagName,
 		UserID:   userID,
 		Result:   result,

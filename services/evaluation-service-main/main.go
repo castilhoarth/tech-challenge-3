@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -41,13 +43,13 @@ func main() {
 		log.Fatal("REDIS_URL deve ser definida (ex: redis://localhost:6379)")
 	}
 
-	flagSvcURL := os.Getenv("FLAG_SERVICE_URL")
-	if flagSvcURL == "" {
+	flagSvcURL, err := validateServiceURL(os.Getenv("FLAG_SERVICE_URL"))
+	if err != nil {
 		log.Fatal("FLAG_SERVICE_URL deve ser definida")
 	}
 
-	targetingSvcURL := os.Getenv("TARGETING_SERVICE_URL")
-	if targetingSvcURL == "" {
+	targetingSvcURL, err := validateServiceURL(os.Getenv("TARGETING_SERVICE_URL"))
+	if err != nil {
 		log.Fatal("TARGETING_SERVICE_URL deve ser definida")
 	}
 
@@ -62,7 +64,7 @@ func main() {
 	}
 
 	// --- Inicializa Clientes ---
-	
+
 	// Cliente Redis
 	opt, err := redis.ParseURL(redisURL)
 	if err != nil {
@@ -105,8 +107,17 @@ func main() {
 	mux.HandleFunc("/health", app.healthHandler)
 	mux.HandleFunc("/evaluate", app.evaluationHandler)
 
-	log.Printf("Serviço de Avaliação (Go) rodando na porta %s", port)
-	if err := http.ListenAndServe(":"+port, mux); err != nil {
+	server := &http.Server{Addr: ":" + port, Handler: mux, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second}
+	log.Println("Serviço de Avaliação iniciado")
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
+}
+
+func validateServiceURL(raw string) (string, error) {
+	u, err := url.ParseRequestURI(raw)
+	if err != nil || u.Scheme != "http" || u.Host == "" {
+		return "", fmt.Errorf("URL de serviço inválida")
+	}
+	return u.String(), nil
 }
