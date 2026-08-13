@@ -109,7 +109,7 @@ jobs:
 
       - name: Setup Python
         if: ${{ inputs.language == 'python' }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
@@ -122,9 +122,10 @@ jobs:
 
       - name: Install dev tools (Go)
         if: ${{ inputs.language == 'go' }}
+        working-directory: ${{ needs.prepare.outputs.context }}
         run: |
           go install github.com/securego/gosec/v2/cmd/gosec@latest
-          go vet ./... || true
+          go vet ./...
 
       - name: Install dev tools (Python)
         if: ${{ inputs.language == 'python' }}
@@ -134,13 +135,15 @@ jobs:
 
       - name: Run dependency security scan (Go)
         if: ${{ inputs.language == 'go' }}
+        working-directory: ${{ needs.prepare.outputs.context }}
         run: |
           gosec ./...
 
       - name: Run dependency security scan (Python)
         if: ${{ inputs.language == 'python' }}
+        working-directory: ${{ needs.prepare.outputs.context }}
         run: |
-          pip-audit --fail-on high || true
+          pip-audit -r requirements.txt || true
 
       - name: Run tests (Go)
         if: ${{ inputs.language == 'go' && inputs.tests_command != '' }}
@@ -200,7 +203,7 @@ jobs:
           docker build -f "$CTX/${{ inputs.dockerfile }}" -t "$IMG" "$CTX"
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

@@ -174,16 +174,16 @@ class TestSQSWorkerLoop:
             }
         ]
         
-        # Make receive_message return messages once, then raise exception to exit loop
+        # Make receive_message return messages once, then interrupt the infinite loop.
         mock_sqs_client.receive_message.side_effect = [
             {'Messages': messages},
-            Exception('Exit loop')
+            KeyboardInterrupt()
         ]
         mock_dynamodb_client.put_item.return_value = {}
         mock_sqs_client.delete_message.return_value = {}
         
         # Act & Assert
-        with pytest.raises(Exception, match='Exit loop'):
+        with pytest.raises(KeyboardInterrupt):
             sqs_worker_loop()
         
         mock_dynamodb_client.put_item.assert_called_once()
@@ -193,11 +193,11 @@ class TestSQSWorkerLoop:
         # Arrange
         mock_sqs_client.receive_message.side_effect = [
             {},  # Empty response (no 'Messages' key)
-            Exception('Exit loop')
+            KeyboardInterrupt()
         ]
         
         # Act & Assert
-        with pytest.raises(Exception, match='Exit loop'):
+        with pytest.raises(KeyboardInterrupt):
             sqs_worker_loop()
 
     def test_worker_handles_client_error(self, mock_sqs_client):
@@ -206,24 +206,26 @@ class TestSQSWorkerLoop:
         error = ClientError({'Error': {'Code': 'ServiceUnavailable'}}, 'ReceiveMessage')
         mock_sqs_client.receive_message.side_effect = [
             error,
-            Exception('Exit loop')
+            KeyboardInterrupt()
         ]
         
         # Act & Assert
-        with pytest.raises(Exception, match='Exit loop'):
-            sqs_worker_loop()
+        with patch('app.time.sleep'):
+            with pytest.raises(KeyboardInterrupt):
+                sqs_worker_loop()
 
     def test_worker_handles_generic_exception(self, mock_sqs_client):
         """Worker should handle generic exceptions and retry"""
         # Arrange
         mock_sqs_client.receive_message.side_effect = [
             RuntimeError('Generic error'),
-            Exception('Exit loop')
+            KeyboardInterrupt()
         ]
         
         # Act & Assert
-        with pytest.raises(Exception, match='Exit loop'):
-            sqs_worker_loop()
+        with patch('app.time.sleep'):
+            with pytest.raises(KeyboardInterrupt):
+                sqs_worker_loop()
 
 
 class TestMessageProcessingIntegration:
@@ -248,13 +250,13 @@ class TestMessageProcessingIntegration:
         
         mock_sqs_client.receive_message.side_effect = [
             {'Messages': messages},
-            Exception('Exit loop')
+            KeyboardInterrupt()
         ]
         mock_dynamodb_client.put_item.return_value = {}
         mock_sqs_client.delete_message.return_value = {}
         
         # Act & Assert
-        with pytest.raises(Exception, match='Exit loop'):
+        with pytest.raises(KeyboardInterrupt):
             sqs_worker_loop()
         
         assert mock_dynamodb_client.put_item.call_count == 3
@@ -292,13 +294,13 @@ class TestMessageProcessingIntegration:
         
         mock_sqs_client.receive_message.side_effect = [
             {'Messages': [message_1, message_2, message_3]},
-            Exception('Exit loop')
+            KeyboardInterrupt()
         ]
         mock_dynamodb_client.put_item.return_value = {}
         mock_sqs_client.delete_message.return_value = {}
         
         # Act & Assert
-        with pytest.raises(Exception, match='Exit loop'):
+        with pytest.raises(KeyboardInterrupt):
             sqs_worker_loop()
         
         # Should process message 1 and 3 successfully (message 2 fails JSON decode)
