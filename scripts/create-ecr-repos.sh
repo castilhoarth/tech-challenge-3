@@ -17,6 +17,7 @@ for repo in "${repos[@]}"; do
   echo "Creating ECR repository: ${full_name}"
   aws ecr create-repository \
     --region "${REGION}" \
+    --profile "${AWS_PROFILE:-terraform-account}" \
     --repository-name "${full_name}" \
     --image-scanning-configuration scanOnPush=true >/dev/null
   echo "Created: ${full_name}"

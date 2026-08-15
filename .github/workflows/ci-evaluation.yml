@@ -27,7 +27,6 @@ jobs:
       push: ${{ github.ref == 'refs/heads/main' }}
       tests_command: 'go test -v -race -cover'
     secrets:
-      ecr_registry: ${{ secrets.ECR_REGISTRY }}
       ecr_repo_prefix: ${{ secrets.ECR_REPOSITORY_PREFIX }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

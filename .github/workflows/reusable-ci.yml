@@ -3,18 +3,16 @@ name: Reusable CI
 on:
   workflow_call:
     secrets:
-      ecr_registry:
-        required: false
       ecr_repo_prefix:
-        required: false
+        required: true
       AWS_ACCESS_KEY_ID:
-        required: false
+        required: true
       AWS_SECRET_ACCESS_KEY:
-        required: false
+        required: true
       AWS_SESSION_TOKEN:
         required: false
       AWS_REGION:
-        required: false
+        required: true
     inputs:
       service:
         required: true
@@ -40,10 +38,6 @@ on:
         type: boolean
         default: false
       ecr_registry:
-        required: false
-        type: string
-        default: ''
-      ecr_repo_prefix:
         required: false
         type: string
         default: ''
@@ -89,9 +83,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup environment
-        run: echo "Setting up for language=${{ inputs.language }}"
-
       - name: Setup Go
         if: ${{ inputs.language == 'go' }}
         uses: actions/setup-go@v5
@@ -136,14 +127,12 @@ jobs:
       - name: Run dependency security scan (Go)
         if: ${{ inputs.language == 'go' }}
         working-directory: ${{ needs.prepare.outputs.context }}
-        run: |
-          gosec ./...
+        run: gosec ./...
 
       - name: Run dependency security scan (Python)
         if: ${{ inputs.language == 'python' }}
         working-directory: ${{ needs.prepare.outputs.context }}
-        run: |
-          pip-audit -r requirements.txt || true
+        run: pip-audit -r requirements.txt || true
 
       - name: Run tests (Go)
         if: ${{ inputs.language == 'go' && inputs.tests_command != '' }}
@@ -185,6 +174,20 @@ jobs:
           scan-type: image
           severity: CRITICAL,HIGH
 
+      - name: Save image for downstream job
+        if: ${{ inputs.push }}
+        env:
+          IMG: ${{ needs.prepare.outputs.image }}
+        run: docker save "$IMG" -o /tmp/image.tar
+
+      - name: Upload image artifact
+        if: ${{ inputs.push }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-${{ inputs.service }}
+          path: /tmp/image.tar
+          retention-days: 1
+
   push_ecr:
     needs:
       - prepare
@@ -192,15 +195,14 @@ jobs:
     if: ${{ inputs.push }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image-${{ inputs.service }}
+          path: /tmp
 
-      - name: Build Docker image for push
-        env:
-          CTX: ${{ needs.prepare.outputs.context }}
-          IMG: ${{ needs.prepare.outputs.image }}
-        run: |
-          docker build -f "$CTX/${{ inputs.dockerfile }}" -t "$IMG" "$CTX"
+      - name: Load image
+        run: docker load -i /tmp/image.tar
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v5
@@ -211,28 +213,22 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Debug registry match
-        env:
-          ECR_REG: ${{ secrets.ecr_registry }}
-        run: |
-          echo "Secret ECR_REG resolves to: $ECR_REG"
-          cat ~/.docker/config.json | jq '.auths | keys'
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Push to ECR
         env:
-            IMAGE: ${{ needs.prepare.outputs.image }}
-            ECR_REG: ${{ secrets.ecr_registry }}
-            ECR_PREFIX: ${{ secrets.ecr_repo_prefix }}
+          IMAGE: ${{ needs.prepare.outputs.image }}
+          ECR_REG: ${{ steps.ecr-login.outputs.registry }}
+          ECR_PREFIX: ${{ secrets.ecr_repo_prefix }}
         run: |
-           SHORT=${GITHUB_SHA::7}
-           TAG=sha-${SHORT}
-           REPO_NAME="${ECR_PREFIX}/${{ inputs.image_name }}"
-           FULL="${ECR_REG}/${REPO_NAME}"
-           docker tag "$IMAGE" "${FULL}:${TAG}"
-           docker push "${FULL}:${TAG}"
-           if [ "$GITHUB_REF" = "refs/heads/main" ]; then
-             docker tag "$IMAGE" "${FULL}:latest" || true
-              docker push "${FULL}:latest"
-            fi
+          SHORT=${GITHUB_SHA::7}
+          TAG=sha-${SHORT}
+          REPO_NAME="${ECR_PREFIX}/${{ inputs.image_name }}"
+          FULL="${ECR_REG}/${REPO_NAME}"
+          docker tag "$IMAGE" "${FULL}:${TAG}"
+          docker push "${FULL}:${TAG}"
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            docker tag "$IMAGE" "${FULL}:latest" || true
+            docker push "${FULL}:latest"
+          fi
