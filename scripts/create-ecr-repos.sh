@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-REGION="${AWS_REGION:-us-east-1}"
-REPO_PREFIX="${ECR_REPOSITORY_PREFIX:-tech-challenge}"
+REGION="${AWS_REGION:-us-east-1}" #Uses AWS_REGION environment variable if set, otherwise defaults to us-east-1
+REPO_PREFIX="${ECR_REPOSITORY_PREFIX:-tech-challenge}" #Uses ECR_REPOSITORY_PREFIX environment variable if set, otherwise defaults to tech-challenge
 
 repos=(
   "auth-service"
