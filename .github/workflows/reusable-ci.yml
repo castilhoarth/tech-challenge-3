@@ -213,6 +213,13 @@ jobs:
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
 
+      - name: Debug registry match
+        env:
+          ECR_REG: ${{ secrets.ecr_registry }}
+        run: |
+          echo "Secret ECR_REG resolves to: $ECR_REG"
+          cat ~/.docker/config.json | jq '.auths | keys'
+
       - name: Push to ECR
         env:
             IMAGE: ${{ needs.prepare.outputs.image }}
