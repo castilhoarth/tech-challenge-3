@@ -213,19 +213,19 @@ jobs:
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
 
-      # - name: Push to ECR
-      #   env:
-      #     IMAGE: ${{ needs.prepare.outputs.image }}
-      #     ECR_REG: ${{ secrets.ecr_registry }}
-      #     ECR_PREFIX: ${{ secrets.ecr_repo_prefix }}
-      #   run: |
-      #     SHORT=${GITHUB_SHA::7}
-      #     TAG=sha-${SHORT}
-      #     REPO_NAME="${ECR_PREFIX}/${{ inputs.image_name }}"
-      #     FULL="${ECR_REG}/${REPO_NAME}"
-      #     docker tag "$IMAGE" "${FULL}:${TAG}"
-      #     docker push "${FULL}:${TAG}"
-      #     if [ "$GITHUB_REF" = "refs/heads/main" ]; then
-      #       docker tag "$IMAGE" "${FULL}:latest" || true
-      #       docker push "${FULL}:latest"
-      #     fi
+      - name: Push to ECR
+        env:
+            IMAGE: ${{ needs.prepare.outputs.image }}
+            ECR_REG: ${{ secrets.ecr_registry }}
+            ECR_PREFIX: ${{ secrets.ecr_repo_prefix }}
+        run: |
+           SHORT=${GITHUB_SHA::7}
+           TAG=sha-${SHORT}
+           REPO_NAME="${ECR_PREFIX}/${{ inputs.image_name }}"
+           FULL="${ECR_REG}/${REPO_NAME}"
+           docker tag "$IMAGE" "${FULL}:${TAG}"
+           docker push "${FULL}:${TAG}"
+           if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+             docker tag "$IMAGE" "${FULL}:latest" || true
+              docker push "${FULL}:latest"
+            fi
