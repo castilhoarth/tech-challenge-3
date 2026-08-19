@@ -3,15 +3,15 @@ name: Reusable CI
 on:
   workflow_call:
     secrets:
-      ecr_repo_prefix:
+      ecr_repo_prefix: #tech-challenge
         required: true
       AWS_ACCESS_KEY_ID:
         required: true
       AWS_SECRET_ACCESS_KEY:
         required: true
-      AWS_SESSION_TOKEN:
+      AWS_SESSION_TOKEN: #only used in aws learner lab
         required: false
-      AWS_REGION:
+      AWS_REGION: #us-east-1
         required: true
     inputs:
       service:
