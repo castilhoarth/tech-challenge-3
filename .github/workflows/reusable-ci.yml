@@ -3,8 +3,8 @@ name: Reusable CI
 on:
   workflow_call:
     secrets:
-      ecr_repo_prefix: #tech-challenge
-        required: true
+      #ecr_repo_prefix: #tech-challenge
+      #required: true
       AWS_ACCESS_KEY_ID:
         required: true
       AWS_SECRET_ACCESS_KEY:
@@ -220,11 +220,10 @@ jobs:
         env:
           IMAGE: ${{ needs.prepare.outputs.image }}
           ECR_REG: ${{ steps.ecr-login.outputs.registry }}
-          ECR_PREFIX: ${{ secrets.ecr_repo_prefix }}
         run: |
           SHORT=${GITHUB_SHA::7}
           TAG=sha-${SHORT}
-          REPO_NAME="${ECR_PREFIX}/${{ inputs.image_name }}"
+          REPO_NAME="${{ inputs.image_name }}"
           FULL="${ECR_REG}/${REPO_NAME}"
           docker tag "$IMAGE" "${FULL}:${TAG}"
           docker push "${FULL}:${TAG}"

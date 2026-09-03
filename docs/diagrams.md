@@ -64,6 +64,7 @@ flowchart TD
     class R fail;
 ```
 
+## DevOps High Level Architecture
 ```mermaid
 graph TD
     %% Estilos de Subgrafos
@@ -72,20 +73,20 @@ graph TD
     classDef clusterStyle fill:#f2e6ff,stroke:#6600cc,stroke-width:2px;
 
     %% Ação do Desenvolvedor
-    Dev[🧑‍💻 Desenvolvedor] -->|1. Git Push Código| RepoApp
+    Dev[Desenvolvedor] -->|1. Git Push Código| RepoApp
 
     %% Fluxo do Aplicativo
-    subgraph RepoApp [📦 REPO 1: Aplicativo & CI]
+    subgraph RepoApp [REPO 1: Aplicativo & CI]
         direction TB
         Code[Código Fonte Python/Node]
-        CI[⚙️ Pipeline de CI <br> GitHub Actions / GitLab CI]
+        CI[Pipeline de CI <br> GitHub Actions / GitLab CI]
         Code --> CI
     end
     class RepoApp repoStyle;
 
     %% Execução do CI
     CI -->|2. Roda Testes & <br> Constrói Imagem Docker| CI
-    CI -->|3. Docker Push| Registry[(🐳 Registro Imagem <br> AWS ECR / Docker Hub)]
+    CI -->|3. Docker Push| Registry[(Registro Imagem <br> AWS ECR / Docker Hub)]
     CI -->|4. Altera Tag & <br> Git Push Automatizado| RepoGitOps
 
     %% Fluxo de GitOps
@@ -95,11 +96,11 @@ graph TD
     class RepoGitOps repoStyle;
 
     %% Monitoramento do ArgoCD
-    ArgoCD[🐙 Argo CD <br> Dentro do Cluster] -->|5. Monitoramento / Polling| RepoGitOps
+    ArgoCD[Argo CD <br> Dentro do Cluster] -->|5. Monitoramento / Polling| RepoGitOps
     ArgoCD -->|6. Detecta Mudança <br> Out of Sync| K8sCluster
 
     %% Aplicação no Cluster
-    subgraph K8sCluster [☸️ CLUSTER KUBERNETES]
+    subgraph K8sCluster [CLUSTER KUBERNETES]
         Pods[Pods Atualizados <br> Nova Versão em Produção]
     end
     class K8sCluster clusterStyle;
@@ -107,7 +108,7 @@ graph TD
     K8sCluster -->|7. Puxa Nova Imagem| Registry
 
     %% Fluxo Paralelo do Terraform
-    subgraph RepoTerraform [🌍 REPO 3: Infraestrutura]
+    subgraph RepoTerraform [REPO 3: Infraestrutura]
         TF[🛠️ Código Terraform]
     end
     class RepoTerraform infraStyle;
