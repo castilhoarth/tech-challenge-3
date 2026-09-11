@@ -71,6 +71,14 @@ class TestHealthEndpoint:
         assert response.content_type == 'application/json'
 
 
+# Pipeline failure scenario:
+# Uncomment this test to make the analytics pipeline fail during its pytest step.
+# Re-comment it after validating the failure behavior.
+#
+# def test_pipeline_failure_scenario():
+#     assert False, "Intentional failure for pipeline validation"
+
+
 class TestProcessMessage:
     """Tests for the process_message function"""
 
