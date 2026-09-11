@@ -75,8 +75,8 @@ class TestHealthEndpoint:
 # Uncomment this test to make the analytics pipeline fail during its pytest step.
 # Re-comment it after validating the failure behavior.
 #
-# def test_pipeline_failure_scenario():
-#     assert False, "Intentional failure for pipeline validation"
+def test_pipeline_failure_scenario():
+     assert False, "Intentional failure for pipeline validation"
 
 
 class TestProcessMessage:
