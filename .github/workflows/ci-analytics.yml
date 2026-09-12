@@ -29,6 +29,7 @@ jobs:
       update_k8s_manifest: ${{ true }}
       k8s_manifest_path: 'k8s/analytics-service/deployment.yaml'
       k8s_image_prefix: '576394965690.dkr.ecr.us-east-1.amazonaws.com/analytics-service'
+      k8s_container_name: 'analytics-service'
 
     secrets:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
