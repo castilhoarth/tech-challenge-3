@@ -65,13 +65,13 @@ on:
         default: 'main'
       # Replace with the current container name in .spec.template.spec.containers.
       k8s_container_name:
-        required: false
+        required: true
         type: string
         default: 'your-container-name'
       # Replace with the image repository prefix used in the Kubernetes manifest.
       # The generated SHA tag is appended by this workflow.
       k8s_image_prefix:
-        required: false
+        required: true
         type: string
         default: ''
 jobs:
