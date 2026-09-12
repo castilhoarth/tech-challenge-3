@@ -3,15 +3,13 @@ name: Reusable CI
 on:
   workflow_call:
     secrets:
-      #ecr_repo_prefix: #tech-challenge
-      #required: true
       AWS_ACCESS_KEY_ID:
         required: true
       AWS_SECRET_ACCESS_KEY:
         required: true
-      AWS_SESSION_TOKEN: #only used in aws learner lab
-        required: false
       AWS_REGION: #us-east-1
+        required: true
+      K8S_REPO_TOKEN:
         required: true
     inputs:
       service:
@@ -45,12 +43,43 @@ on:
         required: false
         type: string
         default: ''
-
+      # Set to true in the caller workflow after the Kubernetes repository is ready.
+      update_k8s_manifest:
+        required: true
+        type: boolean
+        default: false
+      # Replace with the manifest path relative to the root of the Kubernetes repository.
+      k8s_manifest_path:
+        required: true
+        type: string
+        default: 'path/to/deployment.yaml'
+      # Replace with the external repository in owner/repository format.
+      k8s_repository:
+        required: false
+        type: string
+        default: 'castilhoarth/tech-challenge-3-k8s'
+      # Replace if the Kubernetes manifest is maintained on a branch other than main.
+      k8s_branch:
+        required: false
+        type: string
+        default: 'main'
+      # Replace with the current container name in .spec.template.spec.containers.
+      k8s_container_name:
+        required: false
+        type: string
+        default: 'your-container-name'
+      # Replace with the image repository prefix used in the Kubernetes manifest.
+      # The generated SHA tag is appended by this workflow.
+      k8s_image_prefix:
+        required: false
+        type: string
+        default: ''
 jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.set-image.outputs.image }}
+      image_tag: ${{ steps.set-image.outputs.image_tag }}
       context: ${{ steps.ctx.outputs.context }}
     steps:
       - name: Checkout
@@ -75,6 +104,7 @@ jobs:
             IMAGE_NAME="${{ inputs.service }}-service"
           fi
           echo "image=${IMAGE_NAME}:${TAG}" >> $GITHUB_OUTPUT
+          echo "image_tag=${TAG}" >> $GITHUB_OUTPUT
 
   deps_build_and_scan:
     needs: prepare
@@ -209,7 +239,6 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Login to Amazon ECR
@@ -221,8 +250,7 @@ jobs:
           IMAGE: ${{ needs.prepare.outputs.image }}
           ECR_REG: ${{ steps.ecr-login.outputs.registry }}
         run: |
-          SHORT=${GITHUB_SHA::7}
-          TAG=sha-${SHORT}
+          TAG="${{ needs.prepare.outputs.image_tag }}"
           REPO_NAME="${{ inputs.image_name }}"
           FULL="${ECR_REG}/${REPO_NAME}"
           docker tag "$IMAGE" "${FULL}:${TAG}"
@@ -231,3 +259,63 @@ jobs:
             docker tag "$IMAGE" "${FULL}:latest" || true
             docker push "${FULL}:latest"
           fi
+
+  update_k8s_manifest:
+    # Optional final pipeline step: changes the external manifest so Argo CD detects
+    # a Git change and reconciles the application.
+    needs:
+      - prepare
+      - push_ecr
+    # Runs only when explicitly enabled, after a successful image push on main.
+    if: ${{ inputs.update_k8s_manifest && inputs.push && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Kubernetes repository
+        # Replace the repository, branch, and token input values above when ready.
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ inputs.k8s_repository }}
+          ref: ${{ inputs.k8s_branch }}
+          token: ${{ secrets.K8S_REPO_TOKEN }}
+          # Keep this separate from the application repository checkout.
+          path: k8s-manifests
+
+      - name: Install yq
+        # yq edits the YAML manifest without requiring a checked-in script.
+        run: |
+          sudo wget -qO /usr/local/bin/yq \
+            https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Update image
+        # Use the caller-provided image prefix and the same tag pushed to ECR.
+        working-directory: k8s-manifests
+        env:
+          # Manifest path is relative to the checked-out Kubernetes repository.
+          MANIFEST: ${{ inputs.k8s_manifest_path }}
+          # Existing container name to find in the deployment manifest.
+          CONTAINER_NAME: ${{ inputs.k8s_container_name }}
+          IMAGE_PREFIX: ${{ inputs.k8s_image_prefix }}
+          IMAGE_TAG: ${{ needs.prepare.outputs.image_tag }}
+        run: |
+          yq -i '
+            (.spec.template.spec.containers[] | select(.name == strenv(CONTAINER_NAME)).image)
+              = (strenv(IMAGE_PREFIX) + ":" + strenv(IMAGE_TAG))
+          ' "$MANIFEST"
+
+      - name: Commit and push manifest change
+        # A commit in the Kubernetes repository is the event Argo CD listens for.
+        working-directory: k8s-manifests
+        env:
+          # Used to identify which service triggered the manifest update.
+          SERVICE: ${{ inputs.service }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "${{ inputs.k8s_manifest_path }}"
+          if git diff --cached --quiet; then
+            echo "No manifest changes to commit."
+            exit 0
+          fi
+          git commit -m "chore(${SERVICE}): trigger Argo CD sync"
+          git push origin "${{ inputs.k8s_branch }}"
